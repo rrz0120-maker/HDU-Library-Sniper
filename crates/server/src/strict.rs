@@ -137,19 +137,31 @@ fn verified(records: &[Value], task: &Task, seat: &str) -> bool {
     })
 }
 async fn check_records<G: Gateway>(store: &Store, task: &mut Task, gateway: &G) -> Result<bool> {
-    match gateway
-        .records()
-        .await
-        .ok()
-        .and_then(|r| conflicts(&r, task).ok())
-    {
+    let records = gateway.records().await;
+    if let Err(error) = &records {
+        let state = if matches!(
+            error,
+            HduError::AuthenticationExpired(_) | HduError::Http(401)
+        ) {
+            "AUTH_REQUIRED"
+        } else {
+            "UNKNOWN"
+        };
+        task.transition(
+            store,
+            state,
+            &format!("预约记录读取{}，已停止；必要时重新登录", error_kind(error)),
+        )?;
+        return Ok(false);
+    }
+    match records.ok().and_then(|r| conflicts(&r, task).ok()) {
         Some(r) if r.is_empty() => Ok(true),
         Some(_) => {
             task.transition(store, "EXISTING", "目标时段已有预约，已停止")?;
             Ok(false)
         }
         None => {
-            task.transition(store, "UNKNOWN", "预约记录无法确认，已停止写入")?;
+            task.transition(store, "UNKNOWN", "预约记录字段无法确认，已停止写入")?;
             Ok(false)
         }
     }
@@ -206,8 +218,21 @@ async fn tick<G: Gateway>(
                     return Ok(());
                 }
             }
-            _ => {
-                task.transition(store, "STOPPED", "座位映射或服务可达性验证失败，禁止提交")?;
+            result => {
+                let detail = result.as_ref().err().map(error_kind).unwrap_or("映射无效");
+                let state = if matches!(
+                    result,
+                    Err(HduError::AuthenticationExpired(_)) | Err(HduError::Http(401))
+                ) {
+                    "AUTH_REQUIRED"
+                } else {
+                    "STOPPED"
+                };
+                task.transition(
+                    store,
+                    state,
+                    &format!("座位目录读取{detail}，无法验证内部 ID，禁止提交"),
+                )?;
                 return Ok(());
             }
         }
@@ -326,12 +351,31 @@ async fn tick<G: Gateway>(
             task.transition(
                 store,
                 "UNKNOWN",
-                "提交结果待确认，已停止写入；请核对官方预约记录",
+                &format!(
+                    "预约提交{}，结果待确认，已停止写入；请核对官方预约记录",
+                    response
+                        .as_ref()
+                        .err()
+                        .map(error_kind)
+                        .unwrap_or("未获可验证结果")
+                ),
             )?;
             return Ok(());
         }
     }
     Ok(())
+}
+// Fixed categories only: never log raw server bodies or identity-bearing messages.
+fn error_kind(error: &HduError) -> &'static str {
+    match error {
+        HduError::Http(404) => "HTTP 404",
+        HduError::RequestTimeout => "超时",
+        HduError::AuthenticationExpired(_) | HduError::Http(401) => "认证失效",
+        HduError::Http(429 | 403) => "限流或受限",
+        HduError::Http(_) => "HTTP 异常",
+        HduError::Network(_) => "网络异常",
+        _ => "契约校验失败",
+    }
 }
 fn mapping_checksum(m: &Mapping) -> u64 {
     use std::hash::{Hash, Hasher};

@@ -2,6 +2,17 @@
 
 本分支是离线开发交付。没有真实账号登录、真实预约、已有预约取消或公网发布。Codex Cloud 不是常驻预约服务器。
 
+## 获取本次代码
+
+本地分支 `feat/cloud-strict-v3`。当前Git身份无上游写权限，远端推送返回403，未创建PR；交付附带增量Git bundle及补丁。已有上游仓库可导入：
+
+```bash
+git fetch /path/to/HDU-Library-Sniper-v3.bundle feat/cloud-strict-v3:feat/cloud-strict-v3
+git switch feat/cloud-strict-v3
+```
+
+bundle依赖基线 `46ccd4739f5cd14b30bb271fd8d7076903577b50`，新机器先clone原仓库。随后由具备写权限的账号推送该分支或推到自己的fork发起PR，不合并未经审查的改动。
+
 ## 从提交到服务器
 
 1. 审阅开发分支与 [审计说明](V3-AUDIT.md)、[验收清单](V3-VALIDATION.md)。使用自己的常驻 Linux 主机，不需要为本次开发购买服务器。
