@@ -63,6 +63,13 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
+    if env::var("HDU_STRICT_MODE").is_err() {
+        env::set_var("HDU_STRICT_MODE", "1");
+    }
+    if hdu_sniper_server::strict::enabled() && hdu_sniper_auth::AesSecretStore::from_env().is_none()
+    {
+        bail!("严格云端模式必须配置有效的 HDU_SNIPER_SECRET_KEY，拒绝明文凭据存储");
+    }
     let data_dir = app_home().join("data");
     fs::create_dir_all(&data_dir).context("create data directory")?;
     let store = Arc::new(Store::open(data_dir.join("hdu-sniper.sqlite")).context("open database")?);

@@ -83,6 +83,8 @@ type JarChangeHandler = Arc<dyn Fn(&CookieJar) + Send + Sync>;
 pub struct LibraryClient {
     base_url: String,
     http: Client,
+    single_write_http: Client,
+    clock_sample: Mutex<Option<(i64, std::time::Instant, i64)>>,
     jar: Mutex<CookieJar>,
     uid: Mutex<String>,
     name: Mutex<String>,
@@ -113,6 +115,13 @@ impl LibraryClient {
             .map_err(|error| HduError::Network(error.to_string()))?;
         Ok(Self {
             base_url: base_url.trim_end_matches('/').to_string(),
+            single_write_http: Client::builder()
+                .timeout(WRITE_TIMEOUT)
+                .redirect(reqwest::redirect::Policy::none())
+                .retry(reqwest::retry::never())
+                .build()
+                .map_err(|_| HduError::Network("HTTP client".into()))?,
+            clock_sample: Mutex::new(None),
             http,
             jar: Mutex::new(CookieJar::default()),
             uid: Mutex::new(String::new()),
@@ -244,8 +253,12 @@ impl LibraryClient {
             .lock()
             .expect("cookie jar poisoned")
             .header_for(&url);
-        let mut request = self
-            .http
+        let http = if timeout == WRITE_TIMEOUT {
+            &self.single_write_http
+        } else {
+            &self.http
+        };
+        let mut request = http
             .request(method, &url)
             .timeout(timeout)
             .header(ACCEPT, "application/json, text/plain, */*")
@@ -273,6 +286,17 @@ impl LibraryClient {
             }
         })?;
         let headers = response.headers().clone();
+        if let Some(date) = headers
+            .get("date")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| DateTime::parse_from_rfc2822(v).ok())
+        {
+            *self.clock_sample.lock().expect("clock sample") = Some((
+                Utc::now().timestamp() - date.timestamp(),
+                std::time::Instant::now(),
+                date.timestamp(),
+            ));
+        }
         let changed = self
             .jar
             .lock()
@@ -301,6 +325,31 @@ impl LibraryClient {
             ));
         }
         Ok(body)
+    }
+
+    /// HTTP Date is a coarse sanity check, not a replacement for host NTP.
+    pub fn clock_is_sane(&self) -> bool {
+        self.clock_sample
+            .lock()
+            .expect("clock sample")
+            .as_ref()
+            .is_some_and(|(offset, at, _)| offset.abs() <= 2 && at.elapsed().as_secs() < 600)
+    }
+
+    /// Conservative server-time lower bound from the latest HTTP Date. Never advance
+    /// the opening gate just because the host clock is slightly ahead of the server.
+    pub fn booking_now(&self) -> DateTime<Utc> {
+        let now = Utc::now();
+        self.clock_sample
+            .lock()
+            .expect("clock sample")
+            .as_ref()
+            .filter(|(_, at, _)| at.elapsed().as_secs() < 600)
+            .and_then(|(_, at, server)| {
+                DateTime::from_timestamp(server + at.elapsed().as_secs() as i64, 0)
+            })
+            .map(|server| now.min(server))
+            .unwrap_or(now)
     }
 
     pub async fn validate(&self) -> bool {

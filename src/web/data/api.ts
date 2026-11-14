@@ -115,7 +115,22 @@ async function call<T>(path: string, init?: RequestInit, schema?: z.ZodType<T>):
   return schema ? schema.parse(body) : (body as T)
 }
 
+export type StrictStatus = {
+  enabled: boolean
+  writesAllowed: boolean
+  validated: boolean
+  daily: boolean
+  targetDate: string
+  tasks: { date: string; state: string; message: string; attempts: string[]; updatedAt: number }[]
+}
 export const api = {
+  strictStatus: () => call<StrictStatus>("/api/strict/status"),
+  strictStart: () => call<StrictStatus>("/api/strict/start", { method: "POST" }),
+  strictStop: () => call<StrictStatus>("/api/strict/stop", { method: "POST" }),
+  strictDaily: (enabled: boolean) =>
+    call<StrictStatus>("/api/strict/daily", { method: "POST", body: JSON.stringify({ enabled }) }),
+  strictLogin: () =>
+    call<{ valid: boolean; clockSane: boolean }>("/api/strict/check-login", { method: "POST" }),
   session: () => call<SessionStatus>("/api/session", undefined, sessionSchema),
   login: (studentId: string, password: string) =>
     call<{ success: boolean; message: string }>("/api/session/login", {

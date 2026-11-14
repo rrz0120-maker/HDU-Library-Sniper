@@ -38,6 +38,12 @@ jobs:
         run: ./node_modules/.bin/biome ci .
       - name: Typecheck
         run: bun run typecheck
+      - name: Frontend tests and build
+        run: bun run test && bun run build
+      - name: Browser engines
+        run: bun x playwright install --with-deps chromium webkit
+      - name: Mobile and iPad Web UI
+        run: bun run test:e2e
       - name: Rust format
         run: cargo fmt --all -- --check
       - name: Rust clippy
@@ -46,6 +52,29 @@ jobs:
         run: npx --yes jscpd@4 --min-lines 12 --min-tokens 70 --format rust,typescript,tsx --threshold 3 --ignore "**/node_modules/**,**/target/**,**/ui/**" src crates
       - name: Rust tests
         run: cargo test -p hdu-sniper-core -p hdu-sniper-hdu -p hdu-sniper-auth -p hdu-sniper-store -p hdu-sniper-server
+
+  strict-container:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build distroless image
+        run: docker build -f Containerfile -t hdu-v3-test .
+      - name: Isolated container health (no library network)
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f hdu-v3-test >/dev/null 2>&1 || true' EXIT
+          docker run -d --name hdu-v3-test --network none \
+            -e HDU_STRICT_MODE=1 -e HDU_STRICT_WRITES=0 \
+            -e HDU_SNIPER_SECRET_KEY="$(openssl rand -base64 32)" hdu-v3-test
+          for attempt in {1..20}; do
+            if docker exec hdu-v3-test /usr/local/bin/hdu-sniper-server --healthcheck; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
 
   warmup:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

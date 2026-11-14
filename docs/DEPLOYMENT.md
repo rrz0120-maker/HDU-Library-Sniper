@@ -1,5 +1,7 @@
 # 部署说明
 
+> 本分支 V3 固定方案以 [V3 部署说明](V3-DEPLOYMENT.md) 为准，真实写入默认关闭。下文为通用模式历史说明。
+
 [返回项目首页](../README.md) · [开发与发布](DEVELOPMENT.md)
 
 ## 配置环境变量
@@ -80,7 +82,7 @@ podman pull ghcr.io/alaichhe/hdu-library-sniper:latest
 podman volume create hdu-sniper-data 2>/dev/null || true
 podman run -d --name hdu-library-sniper \
   --restart=always \
-  --publish 8000:8000 \
+  --publish 127.0.0.1:8000:8000 \
   --volume hdu-sniper-data:/var/lib/hdu-sniper:Z \
   ghcr.io/alaichhe/hdu-library-sniper:latest
 ```

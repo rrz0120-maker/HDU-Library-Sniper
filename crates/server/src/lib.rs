@@ -30,6 +30,7 @@ mod ratelimit;
 mod runtime;
 mod scheduler;
 mod session;
+pub mod strict;
 use plans::{GroupInput, PlanError, PlanInput};
 use ratelimit::RateLimit;
 
@@ -85,7 +86,9 @@ pub fn build_router(
     auth: Arc<AuthService>,
     scheduler: Arc<Scheduler>,
 ) -> Router {
-    auth.install_refresh_callback();
+    if !strict::enabled() {
+        auth.install_refresh_callback();
+    }
     let state = AppState {
         store,
         auth,
@@ -102,6 +105,11 @@ pub fn build_router(
         .route("/api/session/qr/{uuid}/cancel", post(session::cancel_qr))
         .route("/api/session/logout", post(session::logout));
     let protected = Router::new()
+        .route("/api/strict/status", get(strict::status))
+        .route("/api/strict/start", post(strict::start))
+        .route("/api/strict/stop", post(strict::stop))
+        .route("/api/strict/daily", post(strict::daily))
+        .route("/api/strict/check-login", post(strict::check_login))
         .route("/api/audit", get(list_audit))
         .route("/api/plans", get(list_plans).post(create_plan))
         .route(
@@ -138,9 +146,7 @@ pub fn build_router(
                 )
             }),
         )
-        .fallback_service(
-            ServeDir::new("dist/web").not_found_service(ServeFile::new("dist/web/index.html")),
-        )
+        .fallback_service(ServeDir::new("dist/web").fallback(ServeFile::new("dist/web/index.html")))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             ratelimit::limit_requests,
@@ -253,6 +259,12 @@ async fn guard_origin(request: Request, next: Next) -> Response {
 }
 
 async fn require_auth(State(state): State<AppState>, request: Request, next: Next) -> Response {
+    if strict::enabled()
+        && request.method() != Method::GET
+        && !request.uri().path().starts_with("/api/strict/")
+    {
+        return (StatusCode::CONFLICT, Json(json!({"detail":"严格云端模式禁止通用预约、取消、签到及方案写入口，请使用固定方案"}))).into_response();
+    }
     if state.auth.authenticated() {
         next.run(request).await
     } else {

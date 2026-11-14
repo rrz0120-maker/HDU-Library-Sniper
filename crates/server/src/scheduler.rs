@@ -83,6 +83,9 @@ impl Scheduler {
     }
 
     pub fn auto_check_in_enabled(&self) -> bool {
+        if crate::strict::enabled() {
+            return false;
+        }
         self.store
             .get_meta("auto_checkin_enabled")
             .ok()
@@ -352,6 +355,10 @@ impl Scheduler {
     }
 
     pub async fn run(self: Arc<Self>) {
+        if crate::strict::enabled() {
+            crate::strict::worker(self.store.clone(), self.auth.clone()).await;
+            return;
+        }
         let initial = self.clone();
         tokio::spawn(async move { initial.sync_check_ins().await });
         let booking = self.clone();

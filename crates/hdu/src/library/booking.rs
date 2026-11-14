@@ -25,6 +25,28 @@ impl LibraryClient {
         begin_time: DateTime<Utc>,
         duration_hours: i64,
     ) -> Result<Value, HduError> {
+        self.book_seat_request(seat_id, begin_time, duration_hours, false)
+            .await
+    }
+
+    /// Strict mode: exactly one HTTP write, no auth refresh replay or redirects.
+    pub async fn book_seat_once(
+        &self,
+        seat_id: &str,
+        begin_time: DateTime<Utc>,
+        duration_hours: i64,
+    ) -> Result<Value, HduError> {
+        self.book_seat_request(seat_id, begin_time, duration_hours, true)
+            .await
+    }
+
+    async fn book_seat_request(
+        &self,
+        seat_id: &str,
+        begin_time: DateTime<Utc>,
+        duration_hours: i64,
+        once: bool,
+    ) -> Result<Value, HduError> {
         let uid = self.uid();
         if uid.is_empty() {
             return Err(HduError::AuthenticationExpired("缺少用户 UID".into()));
@@ -41,6 +63,17 @@ impl LibraryClient {
             ("seatBookers[0]".into(), uid.clone()),
         ];
         let token = api_token(seat_id, &uid, begin, duration, api_time);
+        if once {
+            return self
+                .request_json_once(
+                    "/Seat/Index/bookSeats?LAB_JSON=1",
+                    Method::POST,
+                    Some(form),
+                    vec![("Api-Token".into(), token)],
+                    WRITE_TIMEOUT,
+                )
+                .await;
+        }
         self.request_json(
             "/Seat/Index/bookSeats?LAB_JSON=1",
             Method::POST,
@@ -140,5 +173,73 @@ impl LibraryClient {
             .await?;
         assert_action_success(&body)?;
         Ok(body)
+    }
+}
+
+#[cfg(test)]
+mod strict_tests {
+    use super::*;
+    use wiremock::matchers::{body_string_contains, header_exists, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+    #[test]
+    fn clock_check_and_opening_gate_never_advance_ahead_of_server() {
+        let client = LibraryClient::with_base_url("http://127.0.0.1:1").unwrap();
+        assert!(!client.clock_is_sane());
+        let server = Utc::now().timestamp() - 2;
+        *client.clock_sample.lock().unwrap() = Some((2, std::time::Instant::now(), server));
+        assert!(client.clock_is_sane());
+        assert_eq!(client.booking_now().timestamp(), server);
+        *client.clock_sample.lock().unwrap() = Some((30, std::time::Instant::now(), server));
+        assert!(!client.clock_is_sane());
+    }
+    #[tokio::test]
+    async fn single_write_uses_current_contract_and_never_refreshes() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/Seat/Index/bookSeats"))
+            .and(body_string_contains("duration=50400"))
+            .and(body_string_contains("seats%5B0%5D=internal-id"))
+            .and(body_string_contains("seatBookers%5B0%5D=123"))
+            .and(header_exists("api-token"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(
+                serde_json::json!({"ui_type":"com.Redirect","href":"/User/Index/hduCASLogin"}),
+            ))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let client = LibraryClient::with_base_url(&server.uri()).unwrap();
+        client.set_identity("123".into(), "".into());
+        client.set_refresh_handler(Arc::new(|| {
+            Box::pin(async { panic!("strict writes must never refresh") })
+        }));
+        assert!(matches!(
+            client.book_seat_once("internal-id", Utc::now(), 14).await,
+            Err(HduError::AuthenticationExpired(_))
+        ));
+    }
+    #[tokio::test]
+    async fn single_write_never_follows_redirect_or_retries_429() {
+        for code in [307, 429] {
+            let server = MockServer::start().await;
+            Mock::given(method("POST"))
+                .and(path("/Seat/Index/bookSeats"))
+                .respond_with(
+                    ResponseTemplate::new(code)
+                        .insert_header("location", format!("{}/replay", server.uri())),
+                )
+                .expect(1)
+                .mount(&server)
+                .await;
+            Mock::given(path("/replay"))
+                .respond_with(ResponseTemplate::new(200))
+                .expect(0)
+                .mount(&server)
+                .await;
+            let client = LibraryClient::with_base_url(&server.uri()).unwrap();
+            client.set_identity("123".into(), "".into());
+            assert!(
+                matches!(client.book_seat_once("id",Utc::now(),14).await,Err(HduError::Http(n)) if n==code)
+            );
+        }
     }
 }

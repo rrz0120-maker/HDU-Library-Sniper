@@ -32,6 +32,13 @@
 
 ---
 
+## V3 严格云端方案（本分支）
+
+新增四楼宋韵云图 `162 → 157` 固定方案、持久化幂等和移动端一键管理。
+真实写入与每日自动预约默认关闭，部署前阅读 [V3 部署说明](docs/V3-DEPLOYMENT.md)、[审计](docs/V3-AUDIT.md) 和 [验收清单](docs/V3-VALIDATION.md)。
+
+以下原有桌面功能仍保留；严格云端模式不会运行旧循环预约、预锁或自动签到。
+
 ## 操作演示
 
 https://github.com/user-attachments/assets/f8abc8a4-c9f6-4fd9-881b-3f6ec2d45c0d

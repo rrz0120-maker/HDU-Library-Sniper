@@ -19,5 +19,15 @@ export default defineConfig({
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["Pixel 5"] } },
+    {
+      name: "ipad-portrait",
+      testMatch: /strict.spec.ts/,
+      use: { ...devices["iPad (gen 7)"], browserName: "webkit" },
+    },
+    {
+      name: "ipad-landscape",
+      testMatch: /strict.spec.ts/,
+      use: { ...devices["iPad (gen 7) landscape"], browserName: "webkit" },
+    },
   ],
 });

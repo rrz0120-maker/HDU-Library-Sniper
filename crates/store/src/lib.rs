@@ -47,6 +47,7 @@ mod audit;
 mod plans;
 mod schema;
 mod session;
+mod strict;
 
 use schema::migrate;
 
@@ -60,6 +61,7 @@ impl Store {
     }
 
     fn init(conn: Connection) -> Result<Self> {
+        conn.busy_timeout(std::time::Duration::from_secs(5))?;
         migrate(&conn)?;
         conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;")?;
         Ok(Self {

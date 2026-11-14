@@ -1,6 +1,10 @@
 use super::*;
 
 const SCHEMA: &str = r#"
+  CREATE TABLE IF NOT EXISTS strict_tasks (
+    task_key TEXT PRIMARY KEY,
+    document TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS plans (
     id TEXT PRIMARY KEY,

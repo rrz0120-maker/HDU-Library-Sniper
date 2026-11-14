@@ -8,7 +8,8 @@ run_args=(
   --name hdu-library-sniper
   -e HDU_SNIPER_HOME=/var/lib/hdu-sniper
   -e HDU_WEB_PORT=8000
-  -p "${HDU_WEB_PORT:-8000}:8000"
+  -e HDU_STRICT_MODE=1
+  -p "127.0.0.1:${HDU_WEB_PORT:-8000}:8000"
   -v hdu-sniper-data:/var/lib/hdu-sniper:Z
   --restart=always
   --health-cmd='["/usr/local/bin/hdu-sniper-server","--healthcheck"]'
