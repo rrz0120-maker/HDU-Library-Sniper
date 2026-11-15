@@ -51,6 +51,13 @@ jobs:
           docker push "$IMAGE" 2>&1 | tee artifacts/p4/push.log
           docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' > artifacts/p4/digests.json
           printf '%s\n' "$IMAGE" > artifacts/p4/image.txt
+      - name: Preserve an unverified image for diagnosis if acceptance fails
+        if: failure()
+        shell: bash
+        run: |
+          if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+            docker save "$IMAGE" | gzip > artifacts/p4/unverified-image.tar.gz
+          fi
       - name: Retain evidence including failed builds
         if: always()
         uses: actions/upload-artifact@v6

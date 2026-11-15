@@ -8,15 +8,10 @@ import argparse
 import base64
 from datetime import datetime, timedelta
 import json
-import os
 from pathlib import Path
 import secrets
-import sqlite3
 import subprocess
-import tempfile
 import time
-import urllib.error
-import urllib.request
 from zoneinfo import ZoneInfo
 
 parser = argparse.ArgumentParser()
@@ -57,7 +52,7 @@ def request(path, payload=None, expected=200):
     raw = docker("run", "--rm", "--network", f"container:{container}",
                  probe_image, "python", "-c", PROBE, path, json.dumps(payload))
     result = json.loads(raw)
-    assert result["status"] == expected, (path, result["status"], expected)
+    assert result["status"] == expected, (path, result["status"], expected, result["body"])
     return result["body"]
 
 
@@ -101,39 +96,36 @@ try:
     request("/api/strict/status", expected=401)
     checks.append("empty-volume startup; HTTP /api/health; executable healthcheck; unauthenticated API rejected")
     docker("stop", container)
-    with tempfile.TemporaryDirectory(prefix="hdu-v3-fixture-") as directory:
-        database = Path(directory) / "hdu-sniper.sqlite"
-        docker("cp", f"{container}:/var/lib/hdu-sniper/data/hdu-sniper.sqlite", str(database))
-        with sqlite3.connect(database) as db:
-            assert db.execute("SELECT count(*) FROM strict_tasks").fetchone()[0] == 0
-            assert db.execute("SELECT value FROM meta WHERE key='strict_daily_uid'").fetchone() in (None, ("",))
-            assert db.execute("SELECT value FROM meta WHERE key='auto_checkin_enabled'").fetchone() in (None, ("0",))
-            checks.append("new SQLite: no tasks; daily booking and automatic check-in default off")
-            now = datetime.now(ZoneInfo("Asia/Shanghai"))
-            date = now.date() + timedelta(days=2)
-            begin = datetime.combine(date, datetime.min.time(), tzinfo=now.tzinfo).replace(hour=8)
-            opens = now.replace(hour=20, minute=0, second=0, microsecond=0)
-            uid = "123456"
-            task = {"key": f"{uid}:{date}:08:22", "uid": uid, "date": str(date),
-                    "begin": int(begin.timestamp()), "opens": int(opens.timestamp()),
-                    "state": "SUBMITTING_162", "message": "synthetic interrupted write intent",
-                    "attempts": ["162"], "mapping": None, "updated_at": int(now.timestamp())}
-            original = json.dumps(task, separators=(",", ":"), ensure_ascii=False)
-            db.execute("INSERT INTO strict_tasks VALUES (?,?)", (task["key"], original))
-            db.execute("INSERT INTO session(id,uid,name,cookies,updated_at) VALUES(1,?,?,?,?)",
-                       (uid, "Synthetic acceptance identity", "[]", now.isoformat()))
-            # A legacy enabled check-in flag must not activate strict-mode check-in.
-            db.execute("INSERT OR REPLACE INTO meta VALUES('auto_checkin_enabled','1')")
-            db.execute("INSERT INTO audit(event,payload,created_at) VALUES('acceptance_sentinel','{}',?)", (now.isoformat(),))
-        # sqlite3's context manager commits but does NOT close. Flush the fixture
-        # WAL before copying its main file; otherwise the synthetic session is lost.
-        db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        db.close()
-        with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True) as verify:
-            assert verify.execute("SELECT uid FROM session WHERE id=1").fetchone() == (uid,)
-            assert verify.execute("SELECT document FROM strict_tasks").fetchone() == (original,)
-        verify.close()
-        docker("cp", str(database), f"{container}:/var/lib/hdu-sniper/data/hdu-sniper.sqlite")
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    date = now.date() + timedelta(days=2)
+    begin = datetime.combine(date, datetime.min.time(), tzinfo=now.tzinfo).replace(hour=8)
+    opens = now.replace(hour=20, minute=0, second=0, microsecond=0)
+    uid = "123456"
+    task = {"key": f"{uid}:{date}:08:22", "uid": uid, "date": str(date),
+            "begin": int(begin.timestamp()), "opens": int(opens.timestamp()),
+            "state": "SUBMITTING_162", "message": "synthetic interrupted write intent",
+            "attempts": ["162"], "mapping": None, "updated_at": int(now.timestamp())}
+    # Seed the dedicated TEST volume in place while the app is stopped. A host-side
+    # docker cp round trip can change file ownership and omit WAL data.
+    seed = r"""
+import sqlite3, sys, json
+from contextlib import closing
+task = json.loads(sys.argv[1])
+with closing(sqlite3.connect('/data/data/hdu-sniper.sqlite')) as db:
+    assert db.execute('SELECT count(*) FROM strict_tasks').fetchone()[0] == 0
+    assert db.execute("SELECT value FROM meta WHERE key='strict_daily_uid'").fetchone() in (None, ('',))
+    assert db.execute("SELECT value FROM meta WHERE key='auto_checkin_enabled'").fetchone() in (None, ('0',))
+    with db:
+        db.execute('INSERT INTO strict_tasks VALUES (?,?)', (task['key'], json.dumps(task)))
+        db.execute('INSERT INTO session(id,uid,name,cookies,updated_at) VALUES(1,?,?,?,?)',
+                   (task['uid'], 'Synthetic acceptance identity', '[]', sys.argv[2]))
+        db.execute("INSERT OR REPLACE INTO meta VALUES('auto_checkin_enabled','1')")
+        db.execute("INSERT INTO audit(event,payload,created_at) VALUES('acceptance_sentinel','{}',?)", (sys.argv[2],))
+    db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+"""
+    docker("run", "--rm", "--network", "none", "-v", f"{volume}:/data",
+           probe_image, "python", "-c", seed, json.dumps(task), now.isoformat())
+    checks.append("new SQLite: no tasks; daily booking and automatic check-in default off")
     docker("start", container)
     wait_healthy()
     state = request("/api/strict/status")
