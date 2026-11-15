@@ -1,0 +1,38 @@
+# P4 acceptance configuration. Real reservation writes remain disabled.
+services:
+  hdu-sniper:
+    image: ${HDU_IMAGE:?Set HDU_IMAGE to the verified v3-sha tag or digest}
+    platform: linux/amd64
+    env_file: .env
+    environment:
+      HDU_SNIPER_HOME: /var/lib/hdu-sniper
+      HDU_WEB_HOST: 0.0.0.0
+      HDU_WEB_PORT: 8000
+      HDU_STRICT_MODE: "1"
+      HDU_STRICT_WRITES: "0"
+      HDU_STRICT_VALIDATED: "0"
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${HDU_WEB_PORT:-8000}:8000"
+    volumes:
+      - data:/var/lib/hdu-sniper
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: [CMD, /usr/local/bin/hdu-sniper-server, --healthcheck]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+volumes:
+  data:
+    name: ${HDU_DATA_VOLUME:-hdu-sniper-v3-data}

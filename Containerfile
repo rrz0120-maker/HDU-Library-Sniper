@@ -13,7 +13,7 @@ WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY src-tauri ./src-tauri
-RUN cargo build --release -p hdu-sniper-server \
+RUN cargo build --locked --release -p hdu-sniper-server \
     && mkdir -p /var/lib/hdu-sniper/data
 
 FROM gcr.io/distroless/cc-debian12
@@ -26,7 +26,10 @@ COPY --from=rust /var/lib/hdu-sniper /var/lib/hdu-sniper
 ENV HDU_SNIPER_HOME=/var/lib/hdu-sniper \
     HDU_WEB_PORT=8000 \
     HDU_WEB_HOST=0.0.0.0 \
-    TZ=Asia/Shanghai
+    TZ=Asia/Shanghai \
+    HDU_STRICT_MODE=1 \
+    HDU_STRICT_WRITES=0 \
+    HDU_STRICT_VALIDATED=0
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["/usr/local/bin/hdu-sniper-server", "--healthcheck"]

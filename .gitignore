@@ -24,3 +24,17 @@ windows-test/storage/
 windows-test/shared/
 windows-test/*.iso
 windows-test/oem/setup.exe
+
+# Runtime identity/session stores and deployment secrets
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.pem
+*.key
+cookies.json
+credentials.json
+deploy/.env*
+
+__pycache__/
+*.pyc

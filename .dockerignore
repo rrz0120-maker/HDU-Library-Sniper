@@ -17,3 +17,15 @@ src-tauri/gen
 .env.*
 target
 .toolchain
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.pem
+*.key
+cookies.json
+credentials.json
+deploy/.env*
+
+__pycache__/
+*.pyc
