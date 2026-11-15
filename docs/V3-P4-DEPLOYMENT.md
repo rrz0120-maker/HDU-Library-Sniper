@@ -35,7 +35,7 @@ print('Created deploy/.env with mode 0600; existing files are never overwritten.
 PY
 ```
 
-编辑 `deploy/.env`：填入报告中的 `HDU_IMAGE`，以及可信HTTPS域名 `HDU_ALLOWED_HOSTS`（不带协议/路径）。加密密钥须长期保留并安全备份，不能每次重启重新生成。
+编辑 `deploy/.env`：`HDU_IMAGE` 已预填验收通过的digest；填写可信HTTPS域名 `HDU_ALLOWED_HOSTS`（不带协议/路径）。加密密钥须长期保留并安全备份，不能每次重启重新生成。
 
 P4专用 `deploy/compose.yaml` **强制** `HDU_STRICT_MODE=1 / HDU_STRICT_WRITES=0 / HDU_STRICT_VALIDATED=0`。修改env文件不能打开真实写入。每日模式默认关闭且启用请求会被拒绝；严格模式不启动自动签到，包括旧数据库已保存签到开关的情况。
 

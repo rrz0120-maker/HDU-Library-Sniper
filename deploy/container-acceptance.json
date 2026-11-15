@@ -1,0 +1,14 @@
+{
+  "image": "ghcr.io/rrz0120-maker/hdu-library-sniper:v3-sha-4c2213aabd667fbd9c7b9ed9a78b708875a14c55",
+  "checks": [
+    "linux/amd64 image; strict mode on; real writes and validation default off",
+    "empty-volume startup; HTTP /api/health; executable healthcheck; unauthenticated API rejected",
+    "new SQLite: no tasks; daily booking and automatic check-in default off",
+    "persisted write intent not replayed; duplicate starts reuse task; daily gate and legacy check-in suppression",
+    "container restart and replacement preserve SQLite task, UNKNOWN protection and audit; manual takeover works"
+  ],
+  "productionAccess": false,
+  "passed": true,
+  "imageId": "sha256:ad2185db92068bdca64a5fbb49cd7b173af197d518b879606ce8f002a9607cff",
+  "revision": "4c2213aabd667fbd9c7b9ed9a78b708875a14c55"
+}
