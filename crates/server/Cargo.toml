@@ -27,6 +27,7 @@ hdu-sniper-hdu = { path = "../hdu" }
 hdu-sniper-store = { path = "../store" }
 
 [dev-dependencies]
+wiremock.workspace = true
 http-body-util = "0.1"
 tower.workspace = true
 tempfile.workspace = true

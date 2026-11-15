@@ -25,7 +25,7 @@ impl LibraryClient {
         begin_time: DateTime<Utc>,
         duration_hours: i64,
     ) -> Result<Value, HduError> {
-        self.book_seat_request(seat_id, begin_time, duration_hours, false)
+        self.book_seat_request(seat_id, begin_time, duration_hours, false, None)
             .await
     }
 
@@ -36,8 +36,21 @@ impl LibraryClient {
         begin_time: DateTime<Utc>,
         duration_hours: i64,
     ) -> Result<Value, HduError> {
-        self.book_seat_request(seat_id, begin_time, duration_hours, true)
+        self.book_seat_request(seat_id, begin_time, duration_hours, true, None)
             .await
+    }
+
+    pub async fn book_seat_once_timed(
+        &self,
+        seat_id: &str,
+        begin: DateTime<Utc>,
+        hours: i64,
+    ) -> (Result<Value, HduError>, HttpTimings) {
+        let mut timing = HttpTimings::default();
+        let result = self
+            .book_seat_request(seat_id, begin, hours, true, Some(&mut timing))
+            .await;
+        (result, timing)
     }
 
     async fn book_seat_request(
@@ -46,7 +59,9 @@ impl LibraryClient {
         begin_time: DateTime<Utc>,
         duration_hours: i64,
         once: bool,
+        timing: Option<&mut HttpTimings>,
     ) -> Result<Value, HduError> {
+        let local_start = std::time::Instant::now();
         let uid = self.uid();
         if uid.is_empty() {
             return Err(HduError::AuthenticationExpired("缺少用户 UID".into()));
@@ -64,13 +79,18 @@ impl LibraryClient {
         ];
         let token = api_token(seat_id, &uid, begin, duration, api_time);
         if once {
+            let mut timing = timing;
+            if let Some(t) = timing.as_deref_mut() {
+                t.local_prepare_ms = local_start.elapsed().as_secs_f64() * 1000.0;
+            }
             return self
-                .request_json_once(
+                .request_json_once_measured(
                     "/Seat/Index/bookSeats?LAB_JSON=1",
                     Method::POST,
                     Some(form),
                     vec![("Api-Token".into(), token)],
                     WRITE_TIMEOUT,
+                    timing,
                 )
                 .await;
         }

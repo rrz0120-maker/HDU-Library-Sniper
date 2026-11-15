@@ -1,6 +1,12 @@
 use super::*;
 
 const SCHEMA: &str = r#"
+  CREATE TABLE IF NOT EXISTS manual_previews (
+    ticket TEXT PRIMARY KEY, uid TEXT NOT NULL, document TEXT NOT NULL, expires INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS manual_writes (
+    uid TEXT PRIMARY KEY, ticket TEXT NOT NULL UNIQUE, result TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS strict_tasks (
     task_key TEXT PRIMARY KEY,
     document TEXT NOT NULL

@@ -11,6 +11,7 @@ services:
       HDU_STRICT_MODE: "1"
       HDU_STRICT_WRITES: "0"
       HDU_STRICT_VALIDATED: "0"
+      HDU_MANUAL_TEST_WRITES: "0"
       TZ: Asia/Shanghai
     ports:
       - "127.0.0.1:${HDU_WEB_PORT:-8000}:8000"

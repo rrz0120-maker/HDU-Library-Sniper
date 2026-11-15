@@ -43,6 +43,24 @@ impl LibraryClient {
         Ok(out)
     }
 
+    /// Inspect the actual date contract without guessing whether a numeric field
+    /// means days, a timestamp, or a count. Caller must fail closed on unknown shapes.
+    pub async fn booking_range_raw(&self, room_query: &str) -> Result<Value, HduError> {
+        let body = self
+            .request_json_once(
+                &format!("/Seat/Index/searchSeats?{room_query}&LAB_JSON=1"),
+                Method::GET,
+                None,
+                Vec::new(),
+                READ_TIMEOUT,
+            )
+            .await?;
+        body.get("data")
+            .and_then(|v| v.get("range"))
+            .cloned()
+            .ok_or_else(|| HduError::Parse("预约范围缺失".into()))
+    }
+
     pub async fn booking_range(&self, room_query: &str) -> Result<BookingRange, HduError> {
         let body = self
             .request_json(

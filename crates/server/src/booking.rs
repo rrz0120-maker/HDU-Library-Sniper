@@ -16,7 +16,7 @@ use serde_json::Value;
 
 mod burst;
 mod classify;
-pub(crate) use classify::{is_seat_unavailable_message, response_message};
+pub(crate) use classify::{is_duplicate_message, is_seat_unavailable_message, response_message};
 mod execute;
 mod types;
 

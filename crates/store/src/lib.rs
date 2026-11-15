@@ -44,6 +44,7 @@ pub struct SessionRow {
 }
 
 mod audit;
+mod manual;
 mod plans;
 mod schema;
 mod session;

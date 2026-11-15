@@ -49,6 +49,20 @@ pub enum HduError {
     Parse(String),
 }
 
+/// Client-observed boundaries; network/queue/server time cannot be separated
+/// without upstream tracing. `dispatch_at` is the send() call, not a wire timestamp.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpTimings {
+    pub local_prepare_ms: f64,
+    pub dispatch_at: Option<String>,
+    pub dispatch_to_headers_ms: Option<f64>,
+    pub body_decode_ms: Option<f64>,
+    pub total_request_ms: Option<f64>,
+    pub server_processing_ms: Option<f64>,
+    pub request_upload_ms: Option<f64>,
+}
+
 pub type HduLibraryError = HduError;
 pub type RequestTimeoutError = HduError;
 pub type AuthenticationExpiredError = HduError;
@@ -243,6 +257,21 @@ impl LibraryClient {
         extra_headers: Vec<(String, String)>,
         timeout: Duration,
     ) -> Result<Value, HduError> {
+        self.request_json_once_measured(path, method, form, extra_headers, timeout, None)
+            .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn request_json_once_measured(
+        &self,
+        path: &str,
+        method: Method,
+        form: Option<Vec<(String, String)>>,
+        extra_headers: Vec<(String, String)>,
+        timeout: Duration,
+        mut timing: Option<&mut HttpTimings>,
+    ) -> Result<Value, HduError> {
+        let local_start = std::time::Instant::now();
         let url = if path.starts_with("http") {
             path.to_string()
         } else {
@@ -278,7 +307,19 @@ impl LibraryClient {
         if let Some(form) = form {
             request = request.form(&form);
         }
-        let response = request.send().await.map_err(|error| {
+        if let Some(t) = timing.as_deref_mut() {
+            t.local_prepare_ms += local_start.elapsed().as_secs_f64() * 1000.0;
+            t.dispatch_at = Some(Utc::now().to_rfc3339());
+        }
+        let sent = std::time::Instant::now();
+        let response = request.send().await;
+        if let Some(t) = timing.as_deref_mut() {
+            t.total_request_ms = Some(sent.elapsed().as_secs_f64() * 1000.0);
+            if response.is_ok() {
+                t.dispatch_to_headers_ms = t.total_request_ms;
+            }
+        }
+        let response = response.map_err(|error| {
             if error.is_timeout() {
                 HduError::RequestTimeout
             } else {
@@ -310,10 +351,13 @@ impl LibraryClient {
         if !response.status().is_success() {
             return Err(HduError::Http(response.status().as_u16()));
         }
-        let body: Value = response
-            .json()
-            .await
-            .map_err(|_| HduError::Parse("慧图响应格式无效".into()))?;
+        let decode_start = std::time::Instant::now();
+        let body = response.json::<Value>().await;
+        if let Some(t) = timing {
+            t.body_decode_ms = Some(decode_start.elapsed().as_secs_f64() * 1000.0);
+            t.total_request_ms = Some(sent.elapsed().as_secs_f64() * 1000.0);
+        }
+        let body = body.map_err(|_| HduError::Parse("慧图响应格式无效".into()))?;
         if body.get("ui_type").and_then(Value::as_str) == Some("com.Redirect")
             && body
                 .get("href")
@@ -374,7 +418,12 @@ impl LibraryClient {
     /// 若这里再走 [`Self::request_json`] 的 refresh 重试就会撞上锁，
     /// 登录反而被判成“Cookie 无效”。
     pub async fn validate_once(&self) -> bool {
-        let Ok(body) = self
+        self.validate_once_result().await.unwrap_or(false)
+    }
+
+    /// Same read-only check, preserving network/HTTP error categories for acceptance logs.
+    pub async fn validate_once_result(&self) -> Result<bool, HduError> {
+        let body = self
             .request_json_once(
                 "/User/Center/baseInfo",
                 Method::GET,
@@ -382,11 +431,8 @@ impl LibraryClient {
                 Vec::new(),
                 READ_TIMEOUT,
             )
-            .await
-        else {
-            return false;
-        };
-        self.apply_base_info(&body)
+            .await?;
+        Ok(self.apply_base_info(&body))
     }
 
     fn apply_base_info(&self, body: &Value) -> bool {

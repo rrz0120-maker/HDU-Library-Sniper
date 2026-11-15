@@ -88,10 +88,17 @@ try:
     assert defaults["HDU_STRICT_MODE"] == "1"
     assert defaults["HDU_STRICT_WRITES"] == "0"
     assert defaults["HDU_STRICT_VALIDATED"] == "0"
+    assert defaults["HDU_MANUAL_TEST_WRITES"] == "0"
     checks.append("linux/amd64 image; strict mode on; real writes and validation default off")
     docker("pull", probe_image)  # Tool image only; all probes share the isolated app namespace.
     docker("volume", "create", volume)
     start()
+    manual_help = docker("exec", container, "/usr/local/bin/hdu-sniper-server", "--manual-test", "--help")
+    assert "--manual-test prepare" in manual_help
+    denied = subprocess.run(["docker", "exec", container, "/usr/local/bin/hdu-sniper-server",
+                             "--manual-test", "inspect"], capture_output=True, text=True)
+    assert denied.returncode != 0 and "AUTH_REQUIRED" in denied.stderr
+    checks.append("P5 CLI present; manual write gate default off; no saved session safely rejected")
     assert request("/api/session")["authenticated"] is False
     request("/api/strict/status", expected=401)
     checks.append("empty-volume startup; HTTP /api/health; executable healthcheck; unauthenticated API rejected")

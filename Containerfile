@@ -29,7 +29,8 @@ ENV HDU_SNIPER_HOME=/var/lib/hdu-sniper \
     TZ=Asia/Shanghai \
     HDU_STRICT_MODE=1 \
     HDU_STRICT_WRITES=0 \
-    HDU_STRICT_VALIDATED=0
+    HDU_STRICT_VALIDATED=0 \
+    HDU_MANUAL_TEST_WRITES=0
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["/usr/local/bin/hdu-sniper-server", "--healthcheck"]

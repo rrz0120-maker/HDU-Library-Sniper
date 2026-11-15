@@ -25,6 +25,7 @@ mod catalog;
 pub use booking::BookingExecutor;
 pub use scheduler::Scheduler;
 
+pub mod manual;
 mod plans;
 mod ratelimit;
 mod runtime;

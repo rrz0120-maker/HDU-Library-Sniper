@@ -56,6 +56,11 @@ async fn main() -> anyhow::Result<()> {
         return check_health(configured_port());
     }
 
+    let args: Vec<String> = env::args().skip(1).collect();
+    if args.first().is_some_and(|a| a == "--manual-test") {
+        return hdu_sniper_server::manual::run(app_home(), &args[1..]).await;
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()

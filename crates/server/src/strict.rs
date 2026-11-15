@@ -399,7 +399,7 @@ fn valid_mapping(m: &Mapping, now: i64) -> bool {
         && m.ids[0] != m.ids[1]
         && (0..=600).contains(&(now - m.verified_at))
 }
-fn target_room(name: &str) -> bool {
+pub(crate) fn target_room(name: &str) -> bool {
     // Exact aliases only; never infer the floor from a seat number or internal floor ID.
     [
         "宋韵云图（四楼）",
