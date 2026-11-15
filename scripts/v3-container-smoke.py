@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Container acceptance with synthetic identity and an internal-only network.
+"""Container acceptance with synthetic identity and a network namespace with no external access.
 
 Never reads real credentials, never uses a production volume, never contacts HDU.
 Requires Docker, Python 3.9+. Evidence survives failure; test resources are removed.
@@ -26,11 +26,23 @@ args = parser.parse_args()
 output = Path(args.output)
 output.mkdir(parents=True, exist_ok=True)
 suffix = secrets.token_hex(6)
-container, network, volume = (f"hdu-v3-test-{suffix}-{kind}" for kind in ("app", "net", "data"))
+container, volume = (f"hdu-v3-test-{suffix}-{kind}" for kind in ("app", "data"))
+probe_image = "python:3.13-alpine"
 key = base64.b64encode(secrets.token_bytes(32)).decode()
 checks = []
 report = {"image": args.image, "checks": checks, "productionAccess": False, "passed": False}
+PROBE = r"""
+import json, sys, urllib.request, urllib.error
+payload = None if sys.argv[2] == "null" else sys.argv[2].encode()
+req = urllib.request.Request("http://127.0.0.1:8000" + sys.argv[1], data=payload,
+                             headers={"Content-Type": "application/json"})
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+try:
+    with opener.open(req, timeout=3) as r:
+        print(json.dumps({"status": r.status, "body": json.load(r)}))
+except urllib.error.HTTPError as e:
+    print(json.dumps({"status": e.code, "body": json.load(e)}))
+"""
 
 
 def docker(*command, check=True):
@@ -42,36 +54,30 @@ def docker(*command, check=True):
 
 
 def request(path, payload=None, expected=200):
-    data = None if payload is None else json.dumps(payload).encode()
-    req = urllib.request.Request(base + path, data=data, headers={"Content-Type": "application/json"})
-    try:
-        with opener.open(req, timeout=3) as response:
-            assert response.status == expected
-            return json.load(response)
-    except urllib.error.HTTPError as error:
-        assert error.code == expected, (path, error.code, expected)
-        return json.load(error)
+    raw = docker("run", "--rm", "--network", f"container:{container}",
+                 probe_image, "python", "-c", PROBE, path, json.dumps(payload))
+    result = json.loads(raw)
+    assert result["status"] == expected, (path, result["status"], expected)
+    return result["body"]
 
 
 def start():
-    global base
-    docker("run", "-d", "--name", container, "--network", network,
+    docker("run", "-d", "--name", container, "--network", "none",
            "--platform", "linux/amd64", "--read-only", "--cap-drop", "ALL",
            "--security-opt", "no-new-privileges:true", "--tmpfs", "/tmp:size=32m,mode=1777",
-           "-p", "127.0.0.1::8000", "-v", f"{volume}:/var/lib/hdu-sniper",
+           "-v", f"{volume}:/var/lib/hdu-sniper",
            "-e", f"HDU_SNIPER_SECRET_KEY={key}", args.image)
     info = json.loads(docker("inspect", container))[0]
-    binding = info["NetworkSettings"]["Ports"]["8000/tcp"][0]
-    assert binding["HostIp"] == "127.0.0.1"
-    base = "http://127.0.0.1:" + binding["HostPort"]
+    assert info["HostConfig"]["NetworkMode"] == "none"
+    assert not info["HostConfig"].get("PortBindings")
     wait_healthy()
 
 
 def wait_healthy():
     for _ in range(60):
         try:
-            assert request("/api/health") == {"status": "ok"}
             docker("exec", container, "/usr/local/bin/hdu-sniper-server", "--healthcheck")
+            assert request("/api/health") == {"status": "ok"}
             return
         except (OSError, RuntimeError):
             time.sleep(0.5)
@@ -88,8 +94,7 @@ try:
     assert defaults["HDU_STRICT_WRITES"] == "0"
     assert defaults["HDU_STRICT_VALIDATED"] == "0"
     checks.append("linux/amd64 image; strict mode on; real writes and validation default off")
-    docker("network", "create", "--internal", network)
-    assert json.loads(docker("network", "inspect", network))[0]["Internal"]
+    docker("pull", probe_image)  # Tool image only; all probes share the isolated app namespace.
     docker("volume", "create", volume)
     start()
     assert request("/api/session")["authenticated"] is False
@@ -147,9 +152,10 @@ except Exception as error:
     report["error"] = str(error)
     raise
 finally:
-    (output / "container.log").write_text(docker("logs", container, check=False))
+    logs = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
+    (output / "container.log").write_text(logs.stdout + logs.stderr)
+    (output / "container-state.json").write_text(docker("inspect", "--format", "{{json .State}}", container, check=False))
     (output / "container-acceptance.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     docker("rm", "-f", container, check=False)
     docker("volume", "rm", volume, check=False)
-    docker("network", "rm", network, check=False)
 print(json.dumps(report, ensure_ascii=False, indent=2))
