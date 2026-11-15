@@ -125,6 +125,14 @@ try:
             # A legacy enabled check-in flag must not activate strict-mode check-in.
             db.execute("INSERT OR REPLACE INTO meta VALUES('auto_checkin_enabled','1')")
             db.execute("INSERT INTO audit(event,payload,created_at) VALUES('acceptance_sentinel','{}',?)", (now.isoformat(),))
+        # sqlite3's context manager commits but does NOT close. Flush the fixture
+        # WAL before copying its main file; otherwise the synthetic session is lost.
+        db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        db.close()
+        with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True) as verify:
+            assert verify.execute("SELECT uid FROM session WHERE id=1").fetchone() == (uid,)
+            assert verify.execute("SELECT document FROM strict_tasks").fetchone() == (original,)
+        verify.close()
         docker("cp", str(database), f"{container}:/var/lib/hdu-sniper/data/hdu-sniper.sqlite")
     docker("start", container)
     wait_healthy()
