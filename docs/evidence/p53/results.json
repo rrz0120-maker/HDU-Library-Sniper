@@ -1,0 +1,79 @@
+{
+  "version": "5.3.0",
+  "recordedAtUTC": "2026-11-16T18:03:46.246916+00:00",
+  "baseCommit": "a146d28fc38299325387e560714959ae382763a4",
+  "branch": "feat/android-p53-2000-single",
+  "model": "Codex current session; exact underlying model/effort not exposed or independently verified",
+  "node": "v24.22.1",
+  "playwright": "1.62.1",
+  "firefoxDesktopEngine": "153.0",
+  "browserViewport": {
+    "width": 412,
+    "height": 915,
+    "touch": true,
+    "AndroidUserAgent": true,
+    "realAndroid": false,
+    "TampermonkeyInjectionTested": false
+  },
+  "Go": "go1.27.4 temporary official SHA256-verified toolchain",
+  "tests": {
+    "core": {
+      "passed": 62,
+      "failed": 0,
+      "p52": 26,
+      "p53": 36
+    },
+    "p53Browser": {
+      "passed": 36,
+      "failed": 0,
+      "perEngine": 18
+    },
+    "p52BrowserRegression": {
+      "passed": 22,
+      "failed": 0
+    },
+    "rustSignatures": {
+      "passed": 2,
+      "failed": 0,
+      "p53Vectors": 3
+    },
+    "goSignatures": {
+      "passed": 1,
+      "failed": 0,
+      "p53Vectors": 3
+    },
+    "typecheck": "passed",
+    "biome": "passed",
+    "cargoFmt": "passed",
+    "generatedJavaScriptSyntax": "passed"
+  },
+  "realValidation": {
+    "productionBookingWrites": 0,
+    "cancellations": 0,
+    "automaticCheckIns": 0,
+    "serverDeployment": "not performed/not needed",
+    "P52OneHourSuccess": "user-reported baseline; not repeated in this task",
+    "P53PhoneReadOnlyDrill": "pending user execution",
+    "P53FourteenHourBooking": "not performed",
+    "P532000Peak": "not performed"
+  },
+  "testedFilesSHA256": {
+    "crates/hdu/src/library/parse.rs": "a3115f72aab316a75abdd063ddef19c36fdc29fe4f14d6e4fdde3fba1667b0f1",
+    "package.json": "36c048ad1b77be73609bc3c60f68d194d4598efb9423b87fab04fc7814f33f77",
+    "playwright.p53.config.ts": "18d79689d8a38a8633051b314f5376f1b282808c58e318b12b85c40ddb555bdb",
+    "scripts/build-userscript-p53.mjs": "ae3dbe41f1260dac9f28d7815881484060678b3646721063329ad2b2beee3b30",
+    "src/userscript/core.js": "b31e2d973510ecbdbf0a67c924ea710975bce7cad2a357c72cce5cca78e7867d",
+    "src/userscript/p53/engine.js": "0284c2a62a5b24cc3eb6c4290c2a9d1a03aca0441bba22964193723e22a9ae04",
+    "src/userscript/p53/entry.js": "80d5eb06e830ac83cbfb13d48d8878252b86db2fd54205fc4b83256cf57a1aed",
+    "src/userscript/p53/policy.js": "dddc942499c411dadfd1a99f111e22486bad169db39bb5363ce92025baf5cd49",
+    "src/userscript/p53/store.js": "8b73669006b388cced5532c428af5663fcea971a910a4113ae550b7a6360f65d",
+    "src/userscript/transport.js": "39ff55f5731a2830c715538aef54024e8e5372b7fb740de762e353db1214b5fc",
+    "tests/fixtures/p53-signatures.json": "c4c88dcfc2bc2a1b9a8e0fb9894313b0e13a087145e8221b39ae82392743d01e",
+    "tests/userscript-p53/core.test.mjs": "ab947edc6d54d1c8ea0eecf54a9538745d14f0783a7e2186bced1074ccdcf868",
+    "tests/userscript-p53/fixtures.mjs": "28b870ccf8b675be8867d7448f7a1b666038fb6d00c2bd88fe26ef2079ec9c8e",
+    "tests/userscript-p53/mobile.spec.ts": "122d1123a01bc4dc4323e5e5e7dad639c5c85c5238fedf5c0c929d3efb9adceb",
+    "tests/userscript-p53/signature_go_test.go": "309969069318aa33b1ea380ecf4fc1e35268497a9831dfe0dce135cf627b58bc",
+    "userscripts/hdu-p51.user.js": "48b28459cca2952a659ab0e740cf97e7d82a64866e7c16111a552e31e3cf3c5f",
+    "userscripts/hdu-p53-2000-single.user.js": "2906c4aaaa8f9be9e29596da5f891a80aee222adb812198cbfa6cf2674c260ac"
+  }
+}

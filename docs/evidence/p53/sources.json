@@ -1,0 +1,50 @@
+{
+  "upstream": {
+    "upstreamHead": "b22adf0f506d204826baead7481daf1cfcb12375",
+    "defaultBranch": "main"
+  },
+  "sources": [
+    {
+      "path": "internal/booking/executor.go",
+      "ref": "d33beb1203486a4f09592a9de19bdf93e79f5dc9",
+      "bytes": 16071,
+      "sha256": "c1ce60307c9d898eb52871367123e15f3293b95975115381b3487a655f4739f7",
+      "url": "https://github.com/AlaIchhe/HDU-Library-Sniper/blob/d33beb1203486a4f09592a9de19bdf93e79f5dc9/internal/booking/executor.go"
+    },
+    {
+      "path": "internal/booking/classify.go",
+      "ref": "d33beb1203486a4f09592a9de19bdf93e79f5dc9",
+      "bytes": 3812,
+      "sha256": "bd3d769bd97cc6bfcd951b76289a35f53c66a31b344259d7fa983a7cff7917e0",
+      "url": "https://github.com/AlaIchhe/HDU-Library-Sniper/blob/d33beb1203486a4f09592a9de19bdf93e79f5dc9/internal/booking/classify.go"
+    },
+    {
+      "path": "internal/hdu/booking.go",
+      "ref": "30d2a1937ff183a7f236e1b347ae7cddb1a21560",
+      "bytes": 6320,
+      "sha256": "0ff4e0f387ba93787725c00bf2a089f39f13011406e15a50303f10ee17fd729a",
+      "url": "https://github.com/AlaIchhe/HDU-Library-Sniper/blob/30d2a1937ff183a7f236e1b347ae7cddb1a21560/internal/hdu/booking.go"
+    },
+    {
+      "path": "internal/scheduler/scheduler.go",
+      "ref": "653a3d88c9bafceb1d99230bf5f45f88f127e11f",
+      "bytes": 15801,
+      "sha256": "20c166f988e0a882e03d3d0cbdeded9963c8a7de40aa69cdf6f831b8b61dcf7c",
+      "url": "https://github.com/AlaIchhe/HDU-Library-Sniper/blob/653a3d88c9bafceb1d99230bf5f45f88f127e11f/internal/scheduler/scheduler.go"
+    },
+    {
+      "path": "internal/hdu/crypto.go",
+      "ref": "30d2a1937ff183a7f236e1b347ae7cddb1a21560",
+      "sha256": "3d53022c3e92127bed6d11bb2289658dc0fdb573cd3f1afa8f1b383c4c56a122",
+      "url": "https://github.com/AlaIchhe/HDU-Library-Sniper/blob/30d2a1937ff183a7f236e1b347ae7cddb1a21560/internal/hdu/crypto.go"
+    },
+    {
+      "path": "docs/HUITU-LIMITS.md",
+      "ref": "b22adf0f506d204826baead7481daf1cfcb12375",
+      "sha256": "67e08233c35117815a912ff80a15e653bb2c744eac73f270237f451bc86b6c51",
+      "url": "https://github.com/AlaIchhe/HDU-Library-Sniper/blob/b22adf0f506d204826baead7481daf1cfcb12375/docs/HUITU-LIMITS.md"
+    }
+  ],
+  "GoApiTokenExactCopy": true,
+  "GoApiTokenSha256": "588b483ae831ad9c1c287840fa835aa992836fa8981ebbc84c245c4894efcb73"
+}

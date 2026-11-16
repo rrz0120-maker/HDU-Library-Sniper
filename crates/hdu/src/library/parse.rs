@@ -66,6 +66,28 @@ mod userscript_vectors {
             );
         }
     }
+    #[test]
+    fn p53_fourteen_hour_browser_signatures_match_rust() {
+        // Fixed public seat mapping, synthetic UIDs; the browser uses these same vectors.
+        let vectors: Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/fixtures/p53-signatures.json"
+        )))
+        .unwrap();
+        for v in vectors.as_array().unwrap() {
+            assert_eq!(v["duration"].as_i64().unwrap(), 50400);
+            assert_eq!(
+                api_token(
+                    v["seatId"].as_str().unwrap(),
+                    v["uid"].as_str().unwrap(),
+                    v["beginTime"].as_i64().unwrap(),
+                    v["duration"].as_i64().unwrap(),
+                    v["apiTime"].as_i64().unwrap()
+                ),
+                v["token"].as_str().unwrap()
+            );
+        }
+    }
 }
 
 /// 动作类接口的成功判定。

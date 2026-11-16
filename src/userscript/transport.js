@@ -16,7 +16,7 @@ export class Transport {
   clockValid() {
     return this.clock && performance.now() - this.clock.at < 60000 && Math.abs(this.clock.offset) <= 5000;
   }
-  async request(path, { form, token, write = false, signal } = {}) {
+  async request(path, { form, token, write = false, signal, onHeaders, onDispatch } = {}) {
     const url = new URL(path, ORIGIN);
     check(location.origin === ORIGIN && url.origin === ORIGIN && PATHS.has(url.pathname), "ORIGIN_DENIED");
     check((url.pathname === "/Seat/Index/bookSeats") === write, "WRITE_GATE_CLOSED");
@@ -37,6 +37,7 @@ export class Transport {
     const start = performance.now();
     const timing = { dispatchAt: new Date().toISOString(), serverProcessingMs: null, requestUploadMs: null };
     try {
+      onDispatch?.(timing.dispatchAt);
       const response = await fetch(url.href, {
         method: form ? "POST" : "GET",
         credentials: "same-origin",
@@ -47,7 +48,15 @@ export class Transport {
         headers: token ? { "Api-Token": token, Accept: "application/json" } : { Accept: "application/json" },
         ...(form ? { body: form } : {}),
       });
+      timing.responseAt = new Date().toISOString();
       timing.dispatchToHeadersMs = performance.now() - start;
+      onHeaders?.({
+        date: response.headers.get("Date"),
+        age: response.headers.get("Age"),
+        sentMono: start,
+        receivedMono: performance.now(),
+        receivedWall: Date.now(),
+      });
       const date = Date.parse(response.headers.get("Date"));
       if (Number.isFinite(date)) this.clock = { at: performance.now(), offset: Date.now() - date };
       if (!response.ok)

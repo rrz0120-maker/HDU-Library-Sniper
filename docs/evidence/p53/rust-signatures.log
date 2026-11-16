@@ -1,0 +1,18 @@
+warning: unused field `license` in `workspace.package`
+  --> Cargo.toml:15:1
+   |
+15 | license = "MIT"
+   | ^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license`
+warning: workspace (manifest) generated 1 warning
+   Compiling hdu-sniper-hdu v2.1.7 (/workspace/HDU-Library-Sniper/crates/hdu)
+    Finished `test` profile [unoptimized] target(s) in 5.69s
+     Running unittests src/lib.rs (target/debug/build/hdu-sniper-hdu/44aca9bad86e626e/out/hdu_sniper_hdu-44aca9bad86e626e)
+
+running 2 tests
+test library::parse::userscript_vectors::p53_fourteen_hour_browser_signatures_match_rust ... ok
+test library::parse::userscript_vectors::p51_browser_signatures_match_rust ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s

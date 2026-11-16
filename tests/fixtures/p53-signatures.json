@@ -1,0 +1,26 @@
+[
+  {
+    "seatId": "62726",
+    "uid": "123456",
+    "beginTime": 1795046400,
+    "duration": 50400,
+    "apiTime": 1794916800,
+    "token": "NTMwMGUxMDY1Yjc1NWJlYjhhNDQ3MGMzZTc5MzNjNTU="
+  },
+  {
+    "seatId": "62726",
+    "uid": "9",
+    "beginTime": 1795046400,
+    "duration": 50400,
+    "apiTime": 1794916801,
+    "token": "NTY5MzJlZjg4YjAwODI0MTIzNWY3ZGJkOWE0ZjViMjc="
+  },
+  {
+    "seatId": "62726",
+    "uid": "88888888",
+    "beginTime": 1795046400,
+    "duration": 50400,
+    "apiTime": 1794916802,
+    "token": "YjMzMGVjMzg5ZTBiYjJjN2Y1OGY5YzUwOTE0MzM4N2Y="
+  }
+]

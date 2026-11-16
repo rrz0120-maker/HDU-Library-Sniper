@@ -31,7 +31,10 @@
     "tauri": "tauri",
     "build:userscript": "node scripts/build-userscript.mjs",
     "test:userscript": "node --test tests/userscript/*.test.mjs",
-    "test:userscript:browser": "playwright test --config playwright.userscript.config.ts"
+    "test:userscript:browser": "playwright test --config playwright.userscript.config.ts",
+    "build:userscript:p53": "node scripts/build-userscript-p53.mjs",
+    "test:userscript:p53": "node --test tests/userscript-p53/*.test.mjs",
+    "test:userscript:p53:browser": "playwright test --config playwright.p53.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

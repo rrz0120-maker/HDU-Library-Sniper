@@ -32,6 +32,10 @@
 
 ---
 
+## P5.3 安卓单座整点版（默认只读）
+
+独立脚本仅针对 **2026-11-17 20:00 → 11-19 08:00–22:00 四楼 162**，50400 秒、最多一次正式预约写入，无其他座位或重试。[安装脚本](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p53-2000-single/userscripts/hdu-p53-2000-single.user.js) · [手机只读演练与实战说明](docs/P53-ANDROID-SINGLE.md) · [测试证据](docs/P53-VALIDATION.md)。保留 P5.2 脚本及数据；先在手机完成只读演练，正式任务须当日明确启用。用户已反馈 P5.2 157 一小时真实成功；P5.3 真机、14 小时及 20:00 高峰仍待验证。
+
 ## P5.2 安卓手机测试版
 
 Firefox for Android + Tampermonkey：[安装脚本](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p51-userscript/userscripts/hdu-p51.user.js) · [手机操作教程](docs/P51-ANDROID.md) · [日期修复及更新步骤](docs/P52-DATE-COMPAT.md)。已支持真实Unix秒级日期，`max_date`不包含当天。无需服务器；先继续手机只读检查，再决定是否确认单次预约。

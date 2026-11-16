@@ -235,13 +235,14 @@ export function md5(source) {
     .flatMap((n) => [0, 8, 16, 24].map((bits) => ((n >>> bits) & 255).toString(16).padStart(2, "0")))
     .join("");
 }
-export function signedRequest(seatId, uid, begin, apiTime) {
-  const source = `post&${BOOK_PATH}&api_time${apiTime}&beginTime${begin}&duration3600&is_recommend0&seatBookers[0]${uid}&seats[0]${seatId}`;
+export function signedRequest(seatId, uid, begin, apiTime, duration = 3600) {
+  check(duration === 3600 || duration === 50400, "INVALID_DURATION");
+  const source = `post&${BOOK_PATH}&api_time${apiTime}&beginTime${begin}&duration${duration}&is_recommend0&seatBookers[0]${uid}&seats[0]${seatId}`;
   return {
     token: btoa(md5(source)),
     form: new URLSearchParams({
       beginTime: String(begin),
-      duration: "3600",
+      duration: String(duration),
       is_recommend: "0",
       api_time: String(apiTime),
       "seats[0]": seatId,
