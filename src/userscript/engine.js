@@ -86,7 +86,12 @@ export class Engine {
     const range = parseRange(body?.data?.range);
     const group = category(body?.data);
     timings.catalogReadMs = performance.now() - start;
-    this.log("DATES_OK", { dates: range.dates, min: range.min, max: range.max });
+    this.log("DATES_OK", {
+      dates: range.dates,
+      min: range.min,
+      max: range.max,
+      maxDateExclusive: range.maxDateExclusive,
+    });
     return { range, group };
   }
   checkLogin() {

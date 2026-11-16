@@ -32,9 +32,9 @@
 
 ---
 
-## P5.1 安卓手机测试版
+## P5.2 安卓手机测试版
 
-Firefox for Android + Tampermonkey：[安装脚本](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p51-userscript/userscripts/hdu-p51.user.js) · [手机操作教程](docs/P51-ANDROID.md) · [验证记录](docs/P51-VALIDATION.md)。无需服务器；只读检查后明确确认才能单次提交。真机及真实预约仍待验收。
+Firefox for Android + Tampermonkey：[安装脚本](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p51-userscript/userscripts/hdu-p51.user.js) · [手机操作教程](docs/P51-ANDROID.md) · [日期修复及更新步骤](docs/P52-DATE-COMPAT.md)。已支持真实Unix秒级日期，`max_date`不包含当天。无需服务器；先继续手机只读检查，再决定是否确认单次预约。
 
 ## V3 严格云端方案（本分支）
 

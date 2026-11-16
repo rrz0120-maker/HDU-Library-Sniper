@@ -1,0 +1,29 @@
+{
+  "version": "5.2.0",
+  "date": "2026-11-16T16:03:33.949037+00:00",
+  "baseCommit": "5cbb65a33aba4b3a36edf1d68b325ee0c196b74d",
+  "sha256": "48b28459cca2952a659ab0e740cf97e7d82a64866e7c16111a552e31e3cf3c5f",
+  "coreTests": {
+    "passed": 26,
+    "failed": 0
+  },
+  "browserMockTests": {
+    "passed": 22,
+    "failed": 0,
+    "engines": ["Firefox", "Chromium"]
+  },
+  "realTimestampConversions": {
+    "1794758400": "2026-11-16T00:00:00+08:00",
+    "1795017600": "2026-11-19T00:00:00+08:00"
+  },
+  "maxDateInclusive": false,
+  "dateControlEvidence": "date-control.json",
+  "p51PhoneInstallationAndLogin": "User-reported successful; LOGIN_OK 41–113ms",
+  "p52PhoneUpdate": "Pending user readonly check",
+  "realSeatIds": "Not queried yet",
+  "realBookingWrites": 0,
+  "cancellations": 0,
+  "formalV3ScheduleChanged": false,
+  "writeFunctionSignatureMappingAndLedgerUnchanged": true,
+  "openingAt20Proof": "Insufficient: sample time and before/after comparison not provided"
+}

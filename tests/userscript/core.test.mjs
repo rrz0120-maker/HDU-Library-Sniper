@@ -7,6 +7,7 @@ import {
   md5,
   signedRequest,
   parseRange,
+  rangeMidnight,
   inspectRange,
   validateSelection,
   records,
@@ -51,7 +52,7 @@ function fixture() {
   const selection = { date: day, hour: 9, hours: 1, seat: "162" };
   const range = {
     advance_date: day,
-    max_date: shanghaiDate(Date.now() + 2 * 86400000),
+    max_date: shanghaiDate(Date.now() + 3 * 86400000),
     minBeginTime: 7,
     maxEndTime: 22,
     min_duration: 1,
@@ -417,4 +418,87 @@ test("backup seat occupancy change does not invalidate unchanged selected intern
   f.map.allContent.children[2].children.children[0].seatMap.POIs[1].state = "1";
   assert.equal((await f.confirm(p)).state, "SUCCESS");
   assert.equal(f.io.writes.length, 1);
+});
+
+test("P5.2 real Unix seconds convert to Shanghai midnight with exclusive max_date", async () => {
+  const raw = JSON.parse(await readFile(new URL("../fixtures/p52-real-range.json", import.meta.url)));
+  assert.equal(rangeMidnight(1794758400), Date.parse("2026-11-16T00:00:00+08:00"));
+  assert.equal(rangeMidnight(1795017600), Date.parse("2026-11-19T00:00:00+08:00"));
+  assert.equal(shanghaiDate(rangeMidnight(1794758400)), "2026-11-16");
+  assert.equal(shanghaiDate(rangeMidnight(1795017600)), "2026-11-19");
+  const range = parseRange(raw);
+  assert.deepEqual(range.dates, ["2026-11-16", "2026-11-17", "2026-11-18"]);
+  assert.equal(range.maxDateExclusive, "2026-11-19");
+  assert.deepEqual(parseRange({ ...raw, advance_date: "2026-11-16", max_date: "2026-11-19" }), range);
+  assert.deepEqual(parseRange({ ...raw, advance_date: "2026-11-16" }), range);
+  assert.throws(
+    () => validateSelection({ date: "2026-11-19", hour: 8, hours: 1, seat: "162" }, range, 0),
+    /DATE_OR_TIME_NOT_OPEN/,
+  );
+});
+
+test("P5.2 rejects milliseconds, unsafe/fractional numbers, UTC midnight and invalid dates", () => {
+  for (const value of [
+    1794758400000,
+    1795017600000,
+    Number.MAX_SAFE_INTEGER + 1,
+    Number.MAX_SAFE_INTEGER,
+    NaN,
+    Infinity,
+    -Infinity,
+    -1,
+    1794758400.5,
+    1794758400 + 1,
+    1794758400 + 60,
+    1794758400 + 3600,
+    Date.parse("2026-11-16T00:00:00Z") / 1000,
+    "1794758400",
+    "1794758400000",
+    "2026-02-30",
+    "2026-11-31",
+    "2026-13-01",
+    "2026-11-16T00:00:00+08:00",
+    {},
+    [],
+    true,
+    null,
+    undefined,
+  ]) {
+    assert.throws(() => rangeMidnight(value), /DATE_CONTRACT_UNKNOWN/, String(value));
+  }
+});
+
+test("P5.2 rejects inverted/abnormal spans and handles empty ranges without inventing dates", () => {
+  const raw = {
+    advance_date: 1794758400,
+    max_date: 1795017600,
+    minBeginTime: 7,
+    maxEndTime: 22,
+    min_duration: 1,
+    max_duration: 15,
+    max_num: 4,
+  };
+  assert.throws(
+    () => parseRange({ ...raw, advance_date: raw.max_date, max_date: raw.advance_date }),
+    /DATE_CONTRACT_UNKNOWN/,
+  );
+  assert.throws(
+    () => parseRange({ ...raw, max_date: raw.advance_date + 32 * 86400 }),
+    /DATE_CONTRACT_UNKNOWN/,
+  );
+  assert.equal(parseRange({ ...raw, max_date: raw.advance_date + 31 * 86400 }).dates.length, 31);
+  assert.deepEqual(parseRange({ ...raw, max_date: raw.advance_date }).dates, []);
+});
+
+test("P5.2 numeric date selection preserves 1-hour start/duration and keeps readonly queries write-free", async () => {
+  const f = fixture();
+  f.range.advance_date = Date.parse(`${f.range.advance_date}T00:00:00+08:00`) / 1000;
+  f.range.max_date = Date.parse(`${f.range.max_date}T00:00:00+08:00`) / 1000;
+  const range = await f.engine.openDates();
+  for (const date of range.dates) {
+    await f.engine.querySeats({ ...f.selection, date });
+    assert.equal(beginTime({ ...f.selection, date }), Date.parse(`${date}T09:00:00+08:00`) / 1000);
+  }
+  assert.equal(f.io.writes.length, 0);
+  assert.ok(f.engine.logs.some((log) => log.code === "DATES_OK" && log.maxDateExclusive));
 });

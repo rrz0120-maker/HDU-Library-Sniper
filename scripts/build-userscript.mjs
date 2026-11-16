@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 const metadata = `// ==UserScript==
 // @name         杭电图书馆 P5.1 单次预约测试
 // @namespace    https://github.com/rrz0120-maker/HDU-Library-Sniper
-// @version      5.1.0
+// @version      5.2.0
 // @description  官网同源只读检查与明确确认后单次预约；不自动重试、不取消、不提供20:00定时模式。
 // @match        https://hdu.huitu.zhishulib.com/*
 // @grant        none

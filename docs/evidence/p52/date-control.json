@@ -1,0 +1,20 @@
+{
+  "url": "https://hdu.huitu.zhishulib.com/rwpublic/js/app.es6.min.js",
+  "status": 200,
+  "bytes": 2884355,
+  "sha256": "7d2d5fe2c74bfb96ea7b79cd88b0e9c1ebdb2f4f95493625d9954ded87b49411",
+  "counts": {
+    "advance_date": 0,
+    "max_date": 5,
+    "minDate": 0,
+    "maxDate": 0,
+    "DatePicker": 4,
+    "datepicker": 0
+  },
+  "retrievedAtUtc": "2026-11-16T15:55:53.797026+00:00",
+  "excerpt": "_renderDate(e){for(var t=Number(this.props.data.default.date),r=[],n=0;n<e;n++){var o=t+24*n*60*60,i=VTe(t+24*n*60*60,1);r.push({key:o,value:i})}return r}_renderDay(){var e=new Date(1e3*this.props.data.range.max_date).getFullYear(),t=new Date(1e3*this.props.data.range.max_date).getMonth()+1,r=new Date(1e3*this.props.data.range.max_date).getDate(),n=new Date(e+\"/\"+t+\"/\"+r+\" 00:00:00\").getTime(),o=new Date(1e3*this.props.data.default.date).getFullYear(),i=new Date(1e3*this.props.data.default.date).getMonth()+1,s=new Date(1e3*this.props.data.default.date).getDate(),a=new Date(o+\"/\"+i+\"/\"+s+\" 00:00:00\").getTime();return parseInt((n-a)/60/60/24/1e3)}",
+  "maxDateInclusive": false,
+  "basis": "Official date control: renderDay=(max_date-default.date)/86400; renderDate loops n < dayCount.",
+  "authenticatedRequests": 0,
+  "bookingWrites": 0
+}

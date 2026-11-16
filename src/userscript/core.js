@@ -29,6 +29,27 @@ function midnight(date) {
   check(Number.isFinite(ms) && shanghaiDate(ms) === date, "DATE_CONTRACT_UNKNOWN");
   return ms;
 }
+// Verified by the user's P5.1 read-only response: numeric boundaries are Unix
+// seconds, not offsets. Keep date-only strings compatible and never coerce units.
+export function rangeMidnight(value) {
+  if (typeof value === "string") return midnight(value);
+  check(Number.isSafeInteger(value) && value >= 0 && value < 10_000_000_000, "DATE_CONTRACT_UNKNOWN");
+  const ms = value * 1000;
+  check(midnight(shanghaiDate(ms)) === ms, "DATE_CONTRACT_UNKNOWN");
+  // Explicit IANA zone check also rejects historical DST/non-midnight values.
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Shanghai",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(ms));
+  check(
+    parts.filter((p) => ["hour", "minute", "second"].includes(p.type)).every((p) => p.value === "00"),
+    "DATE_CONTRACT_UNKNOWN",
+  );
+  return ms;
+}
 export function beginTime(selection) {
   check(["162", "157"].includes(selection.seat), "SEAT_NOT_ALLOWED");
   const hour = integer(selection.hour);
@@ -57,9 +78,8 @@ export function inspectRange(range) {
   return result;
 }
 export function parseRange(raw) {
-  // Do not guess whether undocumented numeric fields represent offsets or timestamps.
-  const first = midnight(raw?.advance_date),
-    last = midnight(raw?.max_date);
+  const first = rangeMidnight(raw?.advance_date),
+    last = rangeMidnight(raw?.max_date);
   check(first <= last && (last - first) / DAY <= 31, "DATE_CONTRACT_UNKNOWN");
   const min = integer(raw.minBeginTime),
     max = integer(raw.maxEndTime);
@@ -74,8 +94,10 @@ export function parseRange(raw) {
   );
   if (raw.max_num !== undefined) check(integer(raw.max_num) >= 1, "ONE_PERSON_NOT_ALLOWED");
   const dates = [];
-  for (let at = first; at <= last; at += DAY) dates.push(shanghaiDate(at));
-  return { dates, min, max };
+  // Official control: _renderDay() is the day difference; _renderDate() uses n < days.
+  // max_date is the first excluded date (see docs/evidence/p52/date-control.json).
+  for (let at = first; at < last; at += DAY) dates.push(shanghaiDate(at));
+  return { dates, min, max, maxDateExclusive: shanghaiDate(last) };
 }
 export function validateSelection(selection, range, now = Date.now()) {
   const begin = beginTime(selection);

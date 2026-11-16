@@ -1,5 +1,7 @@
 # P5.1 验证记录
 
+本页保留P5.1交付时的历史状态；最新日期兼容、手机反馈及上界证据见 [P5.2修复记录](P52-DATE-COMPAT.md)。
+
 基于 `feat/cloud-strict-v3` 的 `50a5faa`，开发分支为 `feat/android-p51-userscript`。没有修改生产 Rust 预约算法、原管理前端或部署配置；Rust 仅增加共享签名向量测试。
 
 | 范围 | 结果 |

@@ -41,8 +41,8 @@ export function mount(engine) {
     *{box-sizing:border-box}button,input,select{font:inherit}button,select,input[type=checkbox]{touch-action:manipulation}button{min-height:44px;border:1px solid #b4bec8;border-radius:8px;padding:9px 12px;background:#fff;color:#17212c;cursor:pointer}button:disabled{opacity:.5;cursor:default}
     #toggle{background:#164d80;color:white;border:0;box-shadow:0 3px 12px #0004}section{background:#f8fafc;border:1px solid #aab6c2;border-radius:12px;padding:14px;width:min(380px,calc(100vw - 16px));max-height:calc(100vh - 80px);max-height:calc(100dvh - 80px);overflow-y:auto;overscroll-behavior:contain;box-shadow:0 4px 20px #0003;margin-bottom:8px}section[hidden]{display:none}
     h2{font-size:19px;margin:0 0 8px}p{margin:8px 0;overflow-wrap:anywhere}.hint{font-size:13px;color:#475569}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.fields{display:grid;gap:8px}select{width:100%;min-height:44px;border:1px solid #94a3b8;border-radius:6px;background:white;color:#17212c;padding:8px}label{display:block}.confirm{padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:10px}.confirm label{display:flex;gap:8px;align-items:flex-start;margin:10px 0}input[type=checkbox]{width:22px;height:22px;flex:none}#submit{width:100%;background:#164d80;color:white}#stop{border-color:#a52727;color:#a52727}#status{padding:8px;background:#e7eff7;border-radius:6px}#preview{font-weight:600}textarea{width:100%;height:180px;font:12px/1.5 monospace;white-space:pre-wrap;overflow-wrap:anywhere}#seats{font-size:14px;white-space:pre-wrap}a{color:#164d80}button:focus-visible,select:focus-visible{outline:3px solid #f0b84d}
-  </style><section hidden aria-label="P5.1 单次预约测试">
-    <h2>P5.1 单次预约测试</h2>
+  </style><section hidden aria-label="P5.2 单次预约测试">
+    <h2>P5.2 单次预约测试</h2>
     <p class="hint">宋韵云图（四楼）· 仅 162 / 157 · 1小时 / 1人。真实提交默认关闭。</p>
     <p class="hint">保持浏览器前台、屏幕唤醒及网络正常。暂不提供20:00定时抢座。</p>
     <p id="status" role="status" aria-live="polite">先检查登录，再查询开放日期。</p>
@@ -53,7 +53,7 @@ export function mount(engine) {
     <div class="actions"><button id="result">查看预约结果</button><button id="logs">查看运行日志</button><button id="stop">停止当前任务</button><button id="copy">复制脱敏日志</button></div>
     <textarea id="logtext" aria-label="脱敏运行日志" readonly hidden></textarea>
     <p class="hint">防重复记录只在当前浏览器内有效。请勿用无痕模式、清除网站数据、重装或换设备绕过次数保护。停止任务不会取消预约。</p>
-  </section><button id="toggle" aria-expanded="false">P5.1 预约测试</button>`;
+  </section><button id="toggle" aria-expanded="false">P5.2 预约测试</button>`;
   document.documentElement.append(host);
   const el = (id) => root.getElementById(id);
   let range = null,
@@ -72,7 +72,7 @@ export function mount(engine) {
   const showLogs = () => {
     el("logtext").value = JSON.stringify(
       {
-        version: "P5.1.0",
+        version: "P5.2.0",
         realPerformance: "只代表本次手机环境，不代表20:00高峰；网络、排队和服务器时间无法分离",
         logs: engine.logs,
       },

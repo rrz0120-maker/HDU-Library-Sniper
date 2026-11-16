@@ -13,6 +13,9 @@ async function mocked(context: BrowserContext) {
     success: true,
     occupied: false,
     unknownDate: false,
+    numericDates: false,
+    realSample: false,
+    serverDate: "",
     session: true,
     conflict: false,
     delayWrite: 0,
@@ -47,7 +50,7 @@ async function mocked(context: BrowserContext) {
       route.fulfill({
         status,
         contentType: "application/json",
-        headers: { Date: new Date().toUTCString() },
+        headers: { Date: state.serverDate || new Date().toUTCString() },
         body: JSON.stringify(body),
       });
     if (url.pathname === "/User/Center/baseInfo") {
@@ -72,8 +75,22 @@ async function mocked(context: BrowserContext) {
       return json({
         data: {
           range: {
-            advance_date: state.unknownDate ? 0 : date,
-            max_date: state.unknownDate ? 2 : date,
+            advance_date: state.unknownDate
+              ? 0
+              : state.realSample
+                ? 1794758400
+                : state.numericDates
+                  ? Date.parse(`${date}T00:00:00+08:00`) / 1000
+                  : date,
+            max_date: state.unknownDate
+              ? 2
+              : state.realSample
+                ? 1795017600
+                : state.numericDates
+                  ? Date.parse(`${date}T00:00:00+08:00`) / 1000 + 86400
+                  : new Date(Date.parse(`${date}T00:00:00+08:00`) + 8 * 3600000 + 86400000)
+                      .toISOString()
+                      .slice(0, 10),
             minBeginTime: 7,
             maxEndTime: 22,
             min_duration: 1,
@@ -148,7 +165,7 @@ async function load(page: Page) {
   await page.goto("about:blank");
   await page.goto(`${origin}/#!/Space/Category/list`);
   await page.addScriptTag({ content: script });
-  await page.getByRole("button", { name: "P5.1 预约测试", exact: true }).tap();
+  await page.getByRole("button", { name: "P5.2 预约测试", exact: true }).tap();
 }
 async function prepare(page: Page) {
   await page.getByRole("button", { name: "查询开放日期", exact: true }).tap();
@@ -342,4 +359,47 @@ test("closing and reopening the browser preserves UNKNOWN write intent", async (
     await context.close();
     await rm(profile, { recursive: true, force: true });
   }
+});
+
+test("P5.2 real timestamp sample lists Nov16-18, then readonly seat query never books", async ({
+  page,
+  context,
+}) => {
+  const state = await mocked(context);
+  state.realSample = true;
+  state.serverDate = "Sun, 15 Nov 2026 22:00:00 GMT";
+  // Freeze wall time only; network/performance clocks continue normally.
+  await page.clock.setFixedTime(new Date("2026-11-16T06:00:00+08:00"));
+  await load(page);
+  await page.getByRole("button", { name: "查询开放日期", exact: true }).tap();
+  await expect(page.getByLabel("使用日期", { exact: true })).toHaveValue("2026-11-16");
+  expect(await page.locator("#date option").allTextContents()).toEqual([
+    "2026-11-16",
+    "2026-11-17",
+    "2026-11-18",
+  ]);
+  await page.getByLabel("使用日期", { exact: true }).selectOption("2026-11-18");
+  await page.getByLabel("开始时间", { exact: true }).selectOption("8");
+  await page.getByRole("button", { name: "查询四楼162/157", exact: true }).tap();
+  await expect(page.locator("#seats")).toContainText("id162");
+  await expect(page.locator("#seats")).toContainText("id157");
+  await expect(page.locator("#submit")).toBeDisabled();
+  expect(state.writes).toHaveLength(0);
+  expect(state.requests).not.toContain("/Seat/Index/bookSeats");
+});
+
+test("P5.2 runtime numeric boundaries allow readonly mapping without confirming a booking", async ({
+  page,
+  context,
+}) => {
+  const state = await mocked(context);
+  state.numericDates = true;
+  await load(page);
+  await page.getByRole("button", { name: "查询开放日期", exact: true }).tap();
+  await expect(page.getByLabel("使用日期", { exact: true })).toHaveValue(date);
+  expect(await page.locator("#date option").count()).toBe(1);
+  await page.getByRole("button", { name: "查询四楼162/157", exact: true }).tap();
+  await expect(page.locator("#seats")).toContainText("id162");
+  await expect(page.locator("#seats")).toContainText("id157");
+  expect(state.writes).toHaveLength(0);
 });
