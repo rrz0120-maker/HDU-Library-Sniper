@@ -16,6 +16,7 @@ const metadata = `// ==UserScript==
 await mkdir("userscripts", { recursive: true });
 await build({
   configFile: false,
+  publicDir: false,
   logLevel: "warn",
   build: {
     target: "firefox115",
