@@ -28,7 +28,10 @@
     "podman:auto-update:status": "bash scripts/podman-auto-update-status.sh",
     "autostart:install": "bash scripts/install-systemd-autostart.sh",
     "autostart:uninstall": "bash scripts/uninstall-systemd-autostart.sh",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:userscript": "node scripts/build-userscript.mjs",
+    "test:userscript": "node --test tests/userscript/*.test.mjs",
+    "test:userscript:browser": "playwright test --config playwright.userscript.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

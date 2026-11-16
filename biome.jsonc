@@ -18,7 +18,8 @@
       "!test-results",
       "!src/web/index.css",
       "!**/*.md",
-      "!windows-test/evidence"
+      "!windows-test/evidence",
+      "!userscripts/*.user.js"
     ]
   },
   "formatter": {

@@ -32,6 +32,10 @@
 
 ---
 
+## P5.1 安卓手机测试版
+
+Firefox for Android + Tampermonkey：[安装脚本](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p51-userscript/userscripts/hdu-p51.user.js) · [手机操作教程](docs/P51-ANDROID.md) · [验证记录](docs/P51-VALIDATION.md)。无需服务器；只读检查后明确确认才能单次提交。真机及真实预约仍待验收。
+
 ## V3 严格云端方案（本分支）
 
 P5 普通时段单次验收使用独立 Rust 命令：[操作步骤与授权门禁](docs/P5-MANUAL-TEST.md)。不启动每日调度、不自动取消；真实预约尚未验证。

@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-16T09:37:24.934230+00:00",
+  "baseCommit": "50a5faab218a0be68450a73c55330b01770c63e7",
+  "branch": "feat/android-p51-userscript",
+  "scriptSha256": "bde212eee542ae3320788de0cd11717c3f8d0e1f98c023a8f8b83a0a1ac0763b",
+  "coreMockTests": {
+    "passed": 22,
+    "failed": 0
+  },
+  "browserTests": {
+    "passed": 18,
+    "failed": 0,
+    "engines": ["Firefox", "Chromium"],
+    "viewport": {
+      "width": 412,
+      "height": 915
+    },
+    "touch": true,
+    "androidUserAgent": true,
+    "tampermonkeyInjectionTested": false,
+    "physicalAndroidTested": false
+  },
+  "sharedRustJsSignatureVectors": 4,
+  "realSessionValidated": false,
+  "realSeatIdsValidated": false,
+  "realDateContractValidated": false,
+  "realBookingWrites": 0,
+  "peakModeImplemented": false,
+  "artifactBuildReproducible": true,
+  "addonMetadata": {
+    "source": "https://addons.mozilla.org/api/v5/addons/addon/tampermonkey/",
+    "version": "5.5.0",
+    "compatibility": {
+      "firefox": {
+        "min": "78.0",
+        "max": "*"
+      },
+      "android": {
+        "min": "120.0",
+        "max": "*"
+      }
+    },
+    "platforms": null,
+    "url": "https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/"
+  }
+}

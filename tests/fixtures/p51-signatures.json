@@ -1,0 +1,34 @@
+[
+  {
+    "seatId": "12345",
+    "uid": "123456",
+    "beginTime": 1794787200,
+    "duration": 3600,
+    "apiTime": 1794700800,
+    "token": "NDdiZmQyZTdmY2FkNDg0ODEwZDgzZDk2YmQ1MDg2NjU="
+  },
+  {
+    "seatId": "seat-157_test",
+    "uid": "9",
+    "beginTime": 1794873600,
+    "duration": 3600,
+    "apiTime": 1794700801,
+    "token": "NzcwZDEyZjIyMTM4ZWY1MzFhNTYwZTJiNjhlMzk5NDI="
+  },
+  {
+    "seatId": "座位测试",
+    "uid": "123",
+    "beginTime": 1893456000,
+    "duration": 3600,
+    "apiTime": 1893369600,
+    "token": "YTliNmRmNWJlMmJhYzYyNzM2NjQ1ZmRlNjIwN2ZjNWQ="
+  },
+  {
+    "seatId": "162",
+    "uid": "88888888",
+    "beginTime": 0,
+    "duration": 3600,
+    "apiTime": 0,
+    "token": "MDBhZDlhZmE2ZTc3ZTIyNzgzZTc5N2Y5ZTU2NjNiMTE="
+  }
+]

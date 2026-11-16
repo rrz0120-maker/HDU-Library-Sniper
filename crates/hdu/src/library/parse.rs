@@ -42,6 +42,32 @@ pub(crate) fn api_token(
     base64::engine::general_purpose::STANDARD.encode(hex.as_bytes())
 }
 
+#[cfg(test)]
+mod userscript_vectors {
+    use super::*;
+    #[test]
+    fn p51_browser_signatures_match_rust() {
+        // Synthetic accounts/seat IDs only. The same vectors are used by JS tests.
+        let vectors: Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/fixtures/p51-signatures.json"
+        )))
+        .unwrap();
+        for v in vectors.as_array().unwrap() {
+            assert_eq!(
+                api_token(
+                    v["seatId"].as_str().unwrap(),
+                    v["uid"].as_str().unwrap(),
+                    v["beginTime"].as_i64().unwrap(),
+                    v["duration"].as_i64().unwrap(),
+                    v["apiTime"].as_i64().unwrap()
+                ),
+                v["token"].as_str().unwrap()
+            );
+        }
+    }
+}
+
 /// 动作类接口的成功判定。
 /// 实测 2026-11-13：cancelBooking 成功时返回 CODE=ok、MESSAGE=取消预约成功，
 /// 但 DATA 中**没有 result 字段**（DATA 只含用户信息）。旧实现强求 result=success，
