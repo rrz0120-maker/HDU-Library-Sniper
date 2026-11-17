@@ -351,3 +351,21 @@ test("calibration rejects stale sample and wall-clock jumps for dynamic day", ()
   s.time.wall += 1000;
   assert.throws(() => clock.bounds());
 });
+test("restored WAITING is view-only, never shows an armed local timer or submits", async () => {
+  const s = setup();
+  await arm(s);
+  const other = new DailyEngine(s.io, s.store, () => {}, {
+    task: s.task,
+    wall: () => s.time.wall,
+    mono: () => s.time.mono,
+    visible: () => true,
+  });
+  await other.review();
+  assert.equal(other.reason, "WAITING_VIEW_ONLY");
+  assert.equal(other.state, "IDLE");
+  s.advance(30400);
+  await other.tick();
+  assert.equal(s.io.writes, 0);
+  await s.engine.tick();
+  assert.equal(s.io.writes, 1);
+});

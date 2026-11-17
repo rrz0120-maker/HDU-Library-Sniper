@@ -47,6 +47,10 @@ export class DailyEngine extends SingleEngine {
       });
   }
   emit(state, reason, details = {}) {
+    if (state === "WAITING" && !this.waiting) {
+      state = "IDLE";
+      reason = "WAITING_VIEW_ONLY";
+    }
     if (reason === "SUBMITTING_ONCE") state = "SUBMITTING";
     if (reason === "SERVER_SUCCESS" && state !== "SUCCESS") state = "VERIFYING";
     if (

@@ -885,6 +885,10 @@
       });
     }
     emit(state, reason, details = {}) {
+      if (state === "WAITING" && !this.waiting) {
+        state = "IDLE";
+        reason = "WAITING_VIEW_ONLY";
+      }
       if (reason === "SUBMITTING_ONCE") state = "SUBMITTING";
       if (reason === "SERVER_SUCCESS" && state !== "SUCCESS") state = "VERIFYING";
       if (["SEAT_UNAVAILABLE", "NOT_OPEN", "EXISTING"].includes(reason) && this.attempted && state === "UNKNOWN")
@@ -1383,6 +1387,7 @@
     EXPIRED: ["今日窗口已结束", "stopped"]
   };
   const REASONS = {
+    WAITING_VIEW_ONLY: "这里只查看已保存的待命记录，本页不会恢复提交；若原标签页仍在运行，它可继续。停止任务可停止本浏览器今日任务。",
     PREPARE_TOO_EARLY: "未到19:58。可先取消勾选做只读检查；到时需再次点击启动，不会自动开始。",
     READ_ONLY_DEFAULT: "默认只读；每天需重新授权。",
     REHEARSAL_PASSED: "只读检查通过，没有提交预约。",
@@ -1525,7 +1530,7 @@
         displaySignature = signature;
         const started = performance.now(), stateUpdatedAt = (/* @__PURE__ */ new Date()).toISOString();
         const [label, tone] = PHASES[next.state] || PHASES.UNKNOWN;
-        const text = phase === "ACCEPTED" ? "162 · 已受理，正在核验" : label;
+        const text = next.reason === "WAITING_VIEW_ONLY" ? "待命记录 · 仅查看" : phase === "ACCEPTED" ? "162 · 已受理，正在核验" : label;
         el("toggle").textContent = next.task.day === authDay ? text : `${next.task.date.slice(5)} · ${label}`;
         el("toggle").dataset.tone = tone;
         el("state").textContent = text;

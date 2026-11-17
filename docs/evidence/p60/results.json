@@ -1,0 +1,81 @@
+{
+  "version": "6.0.0",
+  "branch": "feat/android-p60-lite",
+  "baselineCommit": "028d786e5edb58cdc093f8fb4f0343b7b4f99c25",
+  "model": "NOT_EXPOSED",
+  "reasoningEffort": "NOT_EXPOSED",
+  "evidenceBinding": "tested-source-sha256.txt identifies the exact tested source and built artifacts; logs below are original stdout",
+  "node": "v24.22.1",
+  "playwright": "1.62.1",
+  "environment": "Linux desktop Firefox and Chromium with mobile viewport/touch emulation, not Android hardware or Tampermonkey extension",
+  "core": {
+    "passed": 91,
+    "failed": 0,
+    "newP60Tests": 29,
+    "inheritedTests": 62,
+    "log": "core.log"
+  },
+  "browserP60": {
+    "passed": 50,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "projects": ["firefox-mobile-viewport", "chromium-mobile-viewport"],
+    "eachProject": 25,
+    "log": "browser-p60.log",
+    "stats": {
+      "startTime": "2026-11-17T14:57:19.788Z",
+      "duration": 110675.505,
+      "expected": 50,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "browserP53Regression": {
+    "passed": 36,
+    "failed": 0,
+    "log": "browser-p53-regression.log"
+  },
+  "browserP52Regression": {
+    "passed": 22,
+    "failed": 0,
+    "log": "browser-p52-regression.log"
+  },
+  "checks": {
+    "build": "PASS",
+    "syntax": "PASS",
+    "typescript": "PASS (empty successful stdout in typecheck.log)",
+    "biome": "PASS",
+    "sensitiveFileAndCredentialPatternScan": "PASS (31 changed/new files; no private-key/token patterns or credential database/env files found; not a guarantee against every possible secret format)"
+  },
+  "installArtifacts": {
+    "userscripts/hdu-p51.user.js": {
+      "sha256": "48b28459cca2952a659ab0e740cf97e7d82a64866e7c16111a552e31e3cf3c5f",
+      "bytes": 38237,
+      "frozen": true
+    },
+    "userscripts/hdu-p53-2000-single.user.js": {
+      "sha256": "2906c4aaaa8f9be9e29596da5f891a80aee222adb812198cbfa6cf2674c260ac",
+      "bytes": 43458,
+      "frozen": true
+    },
+    "userscripts/hdu-p60-lite.user.js": {
+      "sha256": "c63e099715e4016d625b3a6c3c62e0a86cdbaa8cebc61bf9ca0dd01cabf4ad8b",
+      "bytes": 69095,
+      "frozen": false
+    }
+  },
+  "safety": {
+    "allBrowserNetwork": "Intercepted with context.route(**/*); unknown endpoints fail",
+    "realProductionWrites": 0,
+    "realCampusLoginPerformed": false,
+    "oldDataMutation": false,
+    "formalSubmitDefault": false,
+    "realAndroidP60": "NOT_VERIFIED",
+    "realPeakP60": "NOT_VERIFIED",
+    "cloudDeployment": "NOT_DEPLOYED / NOT_REQUIRED"
+  },
+  "p53RealPeakEvidence": "p53-real-peak.json: user-confirmed, not a P6 execution result",
+  "performanceInterpretation": "Mock elapsed times are not phone or peak performance; fetch call is not packet departure; HTTP duration is not pure server processing; DOM/rAF is not actual human viewing time"
+}

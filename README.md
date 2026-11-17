@@ -32,9 +32,15 @@
 
 ---
 
-## P5.3 安卓单座整点版（默认只读）
+## P6.0 Lite 安卓每日 162（6.0.0，默认只读）
 
-独立脚本仅针对 **2026-11-17 20:00 → 11-19 08:00–22:00 四楼 162**，50400 秒、最多一次正式预约写入，无其他座位或重试。[安装脚本](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p53-2000-single/userscripts/hdu-p53-2000-single.user.js) · [手机只读演练与实战说明](docs/P53-ANDROID-SINGLE.md) · [测试证据](docs/P53-VALIDATION.md)。保留 P5.2 脚本及数据；先在手机完成只读演练，正式任务须当日明确启用。用户已反馈 P5.2 157 一小时真实成功；P5.3 真机、14 小时及 20:00 高峰仍待验证。
+每天 19:59 左右打开 Firefox，核对当天方案、勾选授权并启动；合法 20:00 开放后最多一次预约后天四楼 **162，08:00–22:00**。悬浮入口实时区分提交中、已受理、官方记录核验成功和结果未知。每天日期自动生成，授权不继承；不自动重试或换座，无需服务器。
+
+[手机安装](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p60-lite/userscripts/hdu-p60-lite.user.js) · [安装与每日使用](docs/P60-ANDROID-LITE.md) · [测试证据及限制](docs/P60-VALIDATION.md) · [SHA256](userscripts/SHA256SUMS)。先停用 P5.2/P5.3，保留原安装文件及站点数据，完成未勾选授权的只读检查。P6 已通过 Mock 测试，Android 真机及真实高峰待验证；P5.3 用户确认的高峰成功已单独[冻结报告](docs/evidence/p60/p53-real-peak.json)。
+
+## P5.3 安卓单座整点版（固定日期历史版本）
+
+独立脚本仅针对 **2026-11-17 20:00 → 11-19 08:00–22:00 四楼 162**，50400 秒、最多一次正式预约写入，无其他座位或重试。[原安装脚本](https://raw.githubusercontent.com/rrz0120-maker/HDU-Library-Sniper/feat/android-p53-2000-single/userscripts/hdu-p53-2000-single.user.js) · [原手机说明](docs/P53-ANDROID-SINGLE.md) · [开发时测试证据](docs/P53-VALIDATION.md)。用户已确认 P5.2 157 一小时成功及 P5.3 当晚真实高峰 162 十四小时成功；原包、旧数据与历史开发报告保留，不用旧脚本重新提交已有任务。
 
 ## P5.2 安卓手机测试版
 
