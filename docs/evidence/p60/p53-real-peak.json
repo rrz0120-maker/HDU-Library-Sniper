@@ -1,0 +1,70 @@
+{
+  "status": "REAL_PEAK_TEST_PASS",
+  "evidenceSource": "User-confirmed real peak test, supplied event excerpt and metrics; original log file/screenshots not independently read in this turn",
+  "baselineCommit": "028d786e5edb58cdc093f8fb4f0343b7b4f99c25",
+  "environment": [
+    "OnePlus Android",
+    "Firefox",
+    "Tampermonkey",
+    "no persistent computer",
+    "no cloud server",
+    "no extra cost"
+  ],
+  "day": "2026-11-17",
+  "timezone": "Asia/Shanghai",
+  "target": {
+    "date": "2026-11-19",
+    "begin": "08:00",
+    "end": "22:00",
+    "duration": 50400,
+    "room": "宋韵云图（四楼）",
+    "seat": "162",
+    "floorId": 1558,
+    "seatId": "62726"
+  },
+  "attempts": 1,
+  "automaticRetries": 0,
+  "result": "SUCCESS / RECORD_VERIFIED",
+  "prepareStartedAt": "2026-11-17T19:59:04.630+08:00",
+  "armedAt": "2026-11-17T19:59:05.482+08:00",
+  "firstDispatchAt": "2026-11-17T20:00:00.760+08:00",
+  "firstResponseAt": "2026-11-17T20:00:04.340+08:00",
+  "firstBusinessResultAt": "2026-11-17T20:00:04.341+08:00",
+  "firstRecordVerifiedAt": null,
+  "lastExportedVerifiedEventAt": "2026-11-17T21:57:42.327+08:00",
+  "metricsMs": {
+    "prepareTotal": 852,
+    "loginCheck": 94,
+    "catalogRead": 668,
+    "idResolution": 0,
+    "conflictRead": 66,
+    "preSubmitLocal": 21,
+    "dispatchToHeaders": 3579,
+    "totalRequest": 3580,
+    "bodyDecode": 1,
+    "verification": 1612,
+    "clockSampleRTT": 64,
+    "phoneMinusHTTPDate": 471
+  },
+  "events": [
+    "FORMAL_PREFLIGHT",
+    "LOGIN_OK",
+    "RANGE_OK",
+    "ARMED_FOR_2000",
+    "SUBMITTING_ONCE",
+    "SERVER_SUCCESS",
+    "RECORD_VERIFIED"
+  ],
+  "limitations": [
+    "dispatchAt measures fetch invocation, not network packet departure",
+    "HTTP duration includes network, queueing and server response",
+    "last exported RECORD_VERIFIED can be a subsequent review; first verification timestamp is unknown",
+    "one success does not establish long-term success probability"
+  ],
+  "frozenArtifacts": {
+    "userscripts/hdu-p51.user.js": "48b28459cca2952a659ab0e740cf97e7d82a64866e7c16111a552e31e3cf3c5f",
+    "userscripts/hdu-p53-2000-single.user.js": "2906c4aaaa8f9be9e29596da5f891a80aee222adb812198cbfa6cf2674c260ac"
+  },
+  "model": "NOT_EXPOSED",
+  "reasoningEffort": "NOT_EXPOSED"
+}
