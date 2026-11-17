@@ -16,14 +16,14 @@ export const LATE_MS = 10000;
 export const RECORD_PATH = "/Seat/Index/myBookingList?fromType=web&LAB_JSON=1";
 export const TASK_SUFFIX = `${TASK.date}:08:00-22:00`;
 
-export function taskKey(account) {
-  return `${account}:${TASK_SUFFIX}`;
+export function taskKey(account, task = TASK) {
+  return `${account}:${task.date}:08:00-22:00`;
 }
-export function checkSchedule() {
-  check(shanghaiDate(TASK.open + 2 * 86400000) === TASK.date, "DATE_RULE_MISMATCH");
-  check(TASK.begin + TASK.duration === Date.parse(`${TASK.date}T22:00:00+08:00`) / 1000, "INVALID_DURATION");
+export function checkSchedule(task = TASK) {
+  check(shanghaiDate(task.open + 2 * 86400000) === task.date, "DATE_RULE_MISMATCH");
+  check(task.begin + task.duration === Date.parse(`${task.date}T22:00:00+08:00`) / 1000, "INVALID_DURATION");
 }
-export function targetRange(raw, now) {
+export function targetRange(raw, now, task = TASK) {
   const range = parseRange(raw);
   check(
     range.min <= 8 && range.max >= 22 && integer(raw.min_duration) <= 14 && integer(raw.max_duration) >= 14,
@@ -31,8 +31,8 @@ export function targetRange(raw, now) {
   );
   // Before release, only the FIRST EXCLUDED date may be the target. A wildly
   // different rolling range is not evidence for the user's stated +2 policy.
-  check(range.dates.includes(TASK.date) || range.maxDateExclusive === TASK.date, "DATE_RULE_MISMATCH");
-  check(rangeMidnight(raw.advance_date) <= TASK.begin * 1000, "DATE_RULE_MISMATCH");
+  check(range.dates.includes(task.date) || range.maxDateExclusive === task.date, "DATE_RULE_MISMATCH");
+  check(rangeMidnight(raw.advance_date) <= task.begin * 1000, "DATE_RULE_MISMATCH");
   // Read a future slot in the currently legal range. Its occupancy is irrelevant
   // to the target date; this read proves physical mapping only.
   for (const date of range.dates) {
@@ -71,7 +71,7 @@ export function checkLegacy(row) {
     "HISTORY_MAPPING_MISMATCH",
   );
 }
-export function overlaps(items) {
+export function overlaps(items, task = TASK) {
   return items.filter((r) => {
     const status = String(r.status);
     if (["3", "4", "5", "6", "7", "9"].includes(status)) return false;
@@ -82,24 +82,25 @@ export function overlaps(items) {
       begin > 0 && duration > 0 && duration <= 86400 && Number.isSafeInteger(begin + duration),
       "RECORDS_UNKNOWN",
     );
-    return begin < TASK.begin + TASK.duration && begin + duration > TASK.begin;
+    return begin < task.begin + task.duration && begin + duration > task.begin;
   });
 }
-export function verified162(items, mapping) {
-  return overlaps(items).some(
+export function verified162(items, mapping, task = TASK) {
+  return overlaps(items, task).some(
     (r) =>
-      integer(r.time) === TASK.begin &&
-      integer(r.duration) === TASK.duration &&
-      String(r.seatNum).trim() === TASK.seat &&
+      integer(r.time) === task.begin &&
+      integer(r.duration) === task.duration &&
+      String(r.seatNum).trim() === task.seat &&
       r.roomName === mapping.room &&
-      (r.seatId === undefined || String(r.seatId) === TASK.seatId),
+      (r.seatId === undefined || String(r.seatId) === task.seatId),
   );
 }
 
 // HTTP Date is rounded to seconds. A conservative lower bound prevents using
 // an optimistic midpoint estimate to send early. This is not millisecond sync.
 export class ReleaseClock {
-  constructor(wall = () => Date.now(), mono = () => performance.now()) {
+  constructor(wall = () => Date.now(), mono = () => performance.now(), task = TASK) {
+    this.task = task;
     this.wall = wall;
     this.mono = mono;
     this.sample = null;
@@ -131,9 +132,12 @@ export class ReleaseClock {
     };
   }
   released() {
-    return this.wall() >= TASK.open && this.bounds().lower >= TASK.open;
+    return this.wall() >= this.task.open && this.bounds().lower >= this.task.open;
   }
   deadline() {
-    check(this.wall() <= TASK.open + LATE_MS && this.bounds().upper <= TASK.open + LATE_MS, "MISSED_WINDOW");
+    check(
+      this.wall() <= this.task.open + LATE_MS && this.bounds().upper <= this.task.open + LATE_MS,
+      "MISSED_WINDOW",
+    );
   }
 }

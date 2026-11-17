@@ -27,13 +27,14 @@ import {
 const REJECTED = new Set(["SEAT_UNAVAILABLE", "NOT_OPEN", "EXISTING"]);
 export class SingleEngine {
   constructor(io, store, notify = () => {}, env = {}) {
+    this.task = env.task || TASK;
     this.io = io;
     this.store = store;
     this.notify = notify;
     this.wall = env.wall || (() => Date.now());
     this.mono = env.mono || (() => performance.now());
     this.visible = env.visible || (() => document.visibilityState === "visible");
-    this.clock = new ReleaseClock(this.wall, this.mono);
+    this.clock = new ReleaseClock(this.wall, this.mono, this.task);
     this.owner = crypto.randomUUID();
     this.state = "IDLE";
     this.reason = "READ_ONLY_DEFAULT";
@@ -87,7 +88,7 @@ export class SingleEngine {
     this.ensure(g);
     if (this.identity) check(this.identity.account === account, "IDENTITY_CHANGED");
     this.identity = { uid: String(uid), account };
-    this.key = taskKey(account);
+    this.key = taskKey(account, this.task);
     this.timings.loginCheckMs = this.mono() - start;
     this.emit(this.state, "LOGIN_OK");
   }
@@ -99,11 +100,11 @@ export class SingleEngine {
     this.controller = new AbortController();
     this.emit("PREPARING", arm ? "FORMAL_PREFLIGHT" : "READ_ONLY_REHEARSAL");
     try {
-      checkSchedule();
+      checkSchedule(this.task);
       check(this.visible(), "FOREGROUND_REQUIRED");
       if (arm) {
         check(confirmed, "CONFIRMATION_REQUIRED");
-        check(this.wall() >= TASK.open - PREPARE_MS && this.wall() < TASK.open, "PREPARE_WINDOW");
+        check(this.wall() >= this.task.open - PREPARE_MS && this.wall() < this.task.open, "PREPARE_WINDOW");
         check(!this.store.stopped(), "USER_STOPPED");
       }
       await this.store.probe();
@@ -126,7 +127,7 @@ export class SingleEngine {
       const query = roomQuery(await this.read("/Space/Category/list?LAB_JSON=1", g));
       const body = await this.read(query, g),
         raw = body?.data?.range;
-      this.range = targetRange(raw, this.wall());
+      this.range = targetRange(raw, this.wall(), this.task);
       const group = category(body?.data);
       this.emit("PREPARING", "RANGE_OK", {
         fields: inspectRange(raw),
@@ -149,16 +150,16 @@ export class SingleEngine {
       this.mapping = resolve162(map);
       this.timings.idResolutionMs = this.mono() - parsed;
       const readAt = this.mono();
-      check(overlaps(records(await this.read(RECORD_PATH, g))).length === 0, "EXISTING");
+      check(overlaps(records(await this.read(RECORD_PATH, g)), this.task).length === 0, "EXISTING");
       this.timings.conflictReadMs = this.mono() - readAt;
       this.clock.bounds();
       // Exercise the same generic signing implementation before arming; no write.
       const sample = signedRequest(
-        TASK.seatId,
+        this.task.seatId,
         this.identity.uid,
-        TASK.begin,
+        this.task.begin,
         Math.floor(this.wall() / 1000),
-        TASK.duration,
+        this.task.duration,
       );
       check(sample.form.get("duration") === "50400", "INVALID_DURATION");
       this.ensure(g);
@@ -168,7 +169,7 @@ export class SingleEngine {
         this.emit("READY_READ_ONLY", "REHEARSAL_PASSED");
         return this.view();
       }
-      check(this.wall() < TASK.open && !this.store.stopped(), "PREPARE_TOO_LATE_OR_STOPPED");
+      check(this.wall() < this.task.open && !this.store.stopped(), "PREPARE_TOO_LATE_OR_STOPPED");
       const reserved = await this.store.reserve({
         key: this.key,
         owner: this.owner,
@@ -179,7 +180,7 @@ export class SingleEngine {
         mapping: this.mapping,
         timings: this.timings,
         logs: this.logs.slice(),
-        target: { ...TASK },
+        target: { ...this.task },
         createdAt: new Date(this.wall()).toISOString(),
         verifications: 0,
       });
@@ -234,17 +235,19 @@ export class SingleEngine {
       // Nothing asynchronous between the final local checks, fresh signature,
       // and fetch. No catalog/login/record reads on the release critical path.
       const request = signedRequest(
-        TASK.seatId,
+        this.task.seatId,
         this.identity.uid,
-        TASK.begin,
+        this.task.begin,
         Math.floor(this.wall() / 1000),
-        TASK.duration,
+        this.task.duration,
       );
       this.timings.preSubmitLocalMs = this.mono() - localStart;
       this.emit("UNKNOWN", "SUBMITTING_ONCE");
       const response = await this.io.request(BOOK_PATH, {
         ...request,
         write: true,
+        onHeaders: (sample) => this.submissionHeaders?.(sample),
+        onBusiness: (body, timing) => this.submissionBusiness?.(body, timing),
         signal: this.controller.signal,
         onDispatch: (at) => {
           this.ensure(g);
@@ -326,7 +329,7 @@ export class SingleEngine {
     const start = this.mono();
     try {
       const items = records(await this.read(RECORD_PATH, g, undefined, false));
-      return verified162(items, this.mapping);
+      return verified162(items, this.mapping, this.task);
     } catch (error) {
       this.emit("UNKNOWN", codeOf(error));
       return null;

@@ -3,11 +3,15 @@ import { TASK_SUFFIX } from "./policy.js";
 
 const PREFIX = `hdu-p53:${TASK_SUFFIX}:`;
 export class FormalStore {
+  constructor({ database = "hdu-p53-formal-booking", prefix = PREFIX } = {}) {
+    this.database = database;
+    this.prefix = prefix;
+  }
   async open() {
     if (this.db) return this.db;
     check(globalThis.indexedDB && globalThis.localStorage, "STORAGE_UNAVAILABLE");
     this.db = await new Promise((resolve, reject) => {
-      const req = indexedDB.open("hdu-p53-formal-booking", 1);
+      const req = indexedDB.open(this.database, 1);
       req.onupgradeneeded = () => {
         req.result.createObjectStore("tasks", { keyPath: "key" });
         req.result.createObjectStore("meta");
@@ -25,8 +29,8 @@ export class FormalStore {
     const db = await this.open();
     // Separate metadata, never a booking budget and never deletes a task.
     const value = crypto.randomUUID();
-    localStorage.setItem(`${PREFIX}probe`, value);
-    check(localStorage.getItem(`${PREFIX}probe`) === value, "STORAGE_UNAVAILABLE");
+    localStorage.setItem(`${this.prefix}probe`, value);
+    check(localStorage.getItem(`${this.prefix}probe`) === value, "STORAGE_UNAVAILABLE");
     await new Promise((resolve, reject) => {
       const tx = db.transaction("meta", "readwrite", { durability: "strict" });
       tx.objectStore("meta").put(value, "probe");
@@ -79,7 +83,7 @@ export class FormalStore {
       won = true;
       return row;
     });
-    if (won) localStorage.setItem(`${PREFIX}active`, "1");
+    if (won) localStorage.setItem(`${this.prefix}active`, "1");
     return { won, value };
   }
   async claim(key, owner, at) {
@@ -97,7 +101,7 @@ export class FormalStore {
       won = true;
       return { ...old, state: "UNKNOWN", reason: "WRITE_INTENT_PERSISTED", attempts: 1, intentAt: at };
     });
-    if (won) localStorage.setItem(`${PREFIX}spent:${key}`, "1");
+    if (won) localStorage.setItem(`${this.prefix}spent:${key}`, "1");
     return { won, value };
   }
   finish(key, owner, patch) {
@@ -122,16 +126,16 @@ export class FormalStore {
     return won;
   }
   active() {
-    return localStorage.getItem(`${PREFIX}active`) === "1";
+    return localStorage.getItem(`${this.prefix}active`) === "1";
   }
   spent(key) {
-    return localStorage.getItem(`${PREFIX}spent:${key}`) === "1";
+    return localStorage.getItem(`${this.prefix}spent:${key}`) === "1";
   }
   stopped() {
-    return localStorage.getItem(`${PREFIX}stop`) === "1";
+    return localStorage.getItem(`${this.prefix}stop`) === "1";
   }
   stopSignal() {
-    localStorage.setItem(`${PREFIX}stop`, "1");
+    localStorage.setItem(`${this.prefix}stop`, "1");
   }
   stop(key) {
     return this.transact(key, (old) =>

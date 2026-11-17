@@ -16,7 +16,7 @@ export class Transport {
   clockValid() {
     return this.clock && performance.now() - this.clock.at < 60000 && Math.abs(this.clock.offset) <= 5000;
   }
-  async request(path, { form, token, write = false, signal, onHeaders, onDispatch } = {}) {
+  async request(path, { form, token, write = false, signal, onHeaders, onDispatch, onBusiness } = {}) {
     const url = new URL(path, ORIGIN);
     check(location.origin === ORIGIN && url.origin === ORIGIN && PATHS.has(url.pathname), "ORIGIN_DENIED");
     check((url.pathname === "/Seat/Index/bookSeats") === write, "WRITE_GATE_CLOSED");
@@ -51,6 +51,8 @@ export class Transport {
       timing.responseAt = new Date().toISOString();
       timing.dispatchToHeadersMs = performance.now() - start;
       onHeaders?.({
+        status: response.status,
+        timing: { ...timing },
         date: response.headers.get("Date"),
         age: response.headers.get("Age"),
         sentMono: start,
@@ -72,6 +74,8 @@ export class Transport {
       const decode = performance.now();
       const body = await response.json();
       timing.bodyDecodeMs = performance.now() - decode;
+      timing.businessResultAt = new Date().toISOString();
+      onBusiness?.(body, timing);
       return { body, timing };
     } catch (error) {
       const failure =

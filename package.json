@@ -34,7 +34,10 @@
     "test:userscript:browser": "playwright test --config playwright.userscript.config.ts",
     "build:userscript:p53": "node scripts/build-userscript-p53.mjs",
     "test:userscript:p53": "node --test tests/userscript-p53/*.test.mjs",
-    "test:userscript:p53:browser": "playwright test --config playwright.p53.config.ts"
+    "test:userscript:p53:browser": "playwright test --config playwright.p53.config.ts",
+    "build:userscript:p60": "node scripts/build-userscript-p60.mjs",
+    "test:userscript:p60": "node --test tests/userscript-p60/*.test.mjs",
+    "test:userscript:p60:browser": "playwright test --config playwright.p60.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
