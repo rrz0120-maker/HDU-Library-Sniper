@@ -41,6 +41,9 @@ export async function mock(context: BrowserContext) {
     badRange: false,
     badClock: false,
     openDelayMs: 0,
+    openReadStatus: 200,
+    openingReads: [] as number[],
+    recordsStatus: 200,
   };
   await context.addCookies([
     {
@@ -89,14 +92,19 @@ export async function mock(context: BrowserContext) {
           ],
         },
       });
-    if (url.pathname === "/Seat/Index/searchSeats" && req.method() === "GET")
+    if (url.pathname === "/Seat/Index/searchSeats" && req.method() === "GET") {
+      if (serverTime >= Date.parse(`${day(serverTime)}T20:00:00+08:00`)) {
+        state.openingReads.push(serverTime);
+        if (state.openReadStatus !== 200) return json({}, state.openReadStatus);
+      }
       return json({
         data: {
           range: {
             advance_date: Date.parse(`${day(serverTime)}T00:00:00+08:00`) / 1000,
             max_date:
               Date.parse(`${day(serverTime)}T00:00:00+08:00`) / 1000 +
-              (serverTime >= Date.parse(`${day(serverTime)}T20:00:00+08:00`) + state.openDelayMs ? 3 : 2) * 86400,
+              (serverTime >= Date.parse(`${day(serverTime)}T20:00:00+08:00`) + state.openDelayMs ? 3 : 2) *
+                86400,
             minBeginTime: 7,
             maxEndTime: 22,
             min_duration: 1,
@@ -106,6 +114,7 @@ export async function mock(context: BrowserContext) {
           space_category: { category_id: "3", content_id: "93" },
         },
       });
+    }
     const form = new URLSearchParams(req.postData() || "");
     if (url.pathname === "/Seat/Index/searchSeats") {
       expect(Number(form.get("beginTime"))).toBeLessThan(
@@ -158,6 +167,7 @@ export async function mock(context: BrowserContext) {
       return json(state.response, state.status);
     }
     if (url.pathname === "/Seat/Index/myBookingList") {
+      if (state.recordsStatus !== 200) return json({}, state.recordsStatus);
       const send = () =>
         json({
           content: {
@@ -219,12 +229,12 @@ export async function dbRow(page: Page, database: string, store: string, id: str
 }
 export const formalRow = (p: Page) => dbRow(p, "hdu-p60-daily-booking", "tasks", key);
 export const host = (p: Page) => p.locator("#hdu-p60-host");
-export async function load(page: Page, withHistory = true) {
+export async function load(page: Page, withHistory = true, source = script) {
   await page.clock.install({ time: OPEN - 31000 });
   await page.clock.pauseAt(OPEN - 30000);
   await page.goto(`${origin}/#!/Space/Category/list`);
   if (withHistory) await seed(page);
-  await page.addScriptTag({ content: script });
+  await page.addScriptTag({ content: source });
 }
 export async function expand(page: Page) {
   await host(page)

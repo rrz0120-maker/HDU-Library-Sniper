@@ -127,7 +127,8 @@ export class DailyStore extends FormalStore {
   finish(key, owner, patch) {
     return this.transact(key, (old) => {
       if (!old || old.owner !== owner) return null;
-      const terminal = old.state === "SUCCESS" ||
+      const terminal =
+        old.state === "SUCCESS" ||
         (old.state === "FAILED" && !(patch.state === "SUCCESS" && patch.recordVerified === true));
       const next = terminal ? { ...old } : { ...old, ...patch };
       const d = mergeDiagnostics(old, { ...patch.timings, ...patch });
@@ -141,13 +142,16 @@ export class DailyStore extends FormalStore {
   stop(key, reason = "USER_STOPPED") {
     return this.transact(key, (old) =>
       old && !["SUCCESS", "FAILED"].includes(old.state)
-        ? { ...old, state: old.attempts ? "UNKNOWN" : "STOPPED", reason } : null);
+        ? { ...old, state: old.attempts ? "UNKNOWN" : "STOPPED", reason }
+        : null,
+    );
   }
   // Only invoked by explicit review with a fresh successful official absence check.
   reconcileNotOpen(key, at) {
     check(this.account && key.startsWith(`${this.account}:`), "IDENTITY_CHANGED");
-    return this.transact(key, (old) => canReconcileNotOpen(old)
-      ? { ...old, state: "FAILED", reason: "NOT_OPEN", reconciledAt: at } : null);
+    return this.transact(key, (old) =>
+      canReconcileNotOpen(old) ? { ...old, state: "FAILED", reason: "NOT_OPEN", reconciledAt: at } : null,
+    );
   }
   note(key, diagnostics, logs) {
     return this.transact(key, (old) =>

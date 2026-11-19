@@ -123,7 +123,8 @@ class Store extends MemoryStore {
   }
   async reconcileNotOpen(key, at) {
     const row = this.rows.get(key);
-    if (canReconcileNotOpen(row)) Object.assign(row, { state: "FAILED", reason: "NOT_OPEN", reconciledAt: at });
+    if (canReconcileNotOpen(row))
+      Object.assign(row, { state: "FAILED", reason: "NOT_OPEN", reconciledAt: at });
     return row;
   }
   async note(key, values) {
@@ -388,7 +389,6 @@ test("restored WAITING is view-only, never shows an armed local timer or submits
   assert.equal(s.io.writes, 1);
 });
 
-
 test("clock open but official range closed: no write until fresh positive range", async () => {
   const s = setup();
   s.io.openAt = s.task.open + 1000;
@@ -444,9 +444,16 @@ test("definite NOT_OPEN refusal survives later stop", async () => {
 });
 test("legacy NOT_OPEN recovery requires prior terminal evidence", () => {
   const t = "2026-11-19T12:00:00.550Z";
-  const row = { state: "UNKNOWN", reason: "USER_STOPPED", attempts: 1, recordVerified: false,
-    responseCode: "NOT_OPEN", firstDispatchAt: "2026-11-19T12:00:00.440Z",
-    firstBusinessResultAt: t, uiFeedback: { FAILED: { stateUpdatedAt: "2026-11-19T12:00:00.743Z" } } };
+  const row = {
+    state: "UNKNOWN",
+    reason: "USER_STOPPED",
+    attempts: 1,
+    recordVerified: false,
+    responseCode: "NOT_OPEN",
+    firstDispatchAt: "2026-11-19T12:00:00.440Z",
+    firstBusinessResultAt: t,
+    uiFeedback: { FAILED: { stateUpdatedAt: "2026-11-19T12:00:00.743Z" } },
+  };
   assert.equal(canReconcileNotOpen(row), true);
   assert.equal(canReconcileNotOpen({ ...row, responseCode: "TIMEOUT" }), false);
   assert.equal(canReconcileNotOpen({ ...row, uiFeedback: {} }), false);

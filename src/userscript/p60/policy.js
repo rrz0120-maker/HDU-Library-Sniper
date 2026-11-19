@@ -33,7 +33,10 @@ export function pending(row) {
 // First excluded date is valid preflight evidence, never an open-date permit.
 export function openingRange(raw, task) {
   const range = parseRange(raw);
-  check(range.min <= 8 && range.max >= 22 && integer(raw.min_duration) <= 14 && integer(raw.max_duration) >= 14, "FOURTEEN_HOURS_NOT_ALLOWED");
+  check(
+    range.min <= 8 && range.max >= 22 && integer(raw.min_duration) <= 14 && integer(raw.max_duration) >= 14,
+    "FOURTEEN_HOURS_NOT_ALLOWED",
+  );
   const open = range.dates.includes(task.date);
   check(open || range.maxDateExclusive === task.date, "DATE_RULE_MISMATCH");
   return { open, maxDateExclusive: range.maxDateExclusive };
@@ -41,11 +44,20 @@ export function openingRange(raw, task) {
 export function canReconcileNotOpen(row) {
   if (!row || row.state !== "UNKNOWN" || row.reason !== "USER_STOPPED" || row.attempts !== 1) return false;
   const get = (k) => row[k] ?? row.timings?.[k];
-  const d = Date.parse(get("firstDispatchAt")), b = Date.parse(get("firstBusinessResultAt"));
+  const d = Date.parse(get("firstDispatchAt")),
+    b = Date.parse(get("firstBusinessResultAt"));
   const f = Date.parse(get("uiFeedback")?.FAILED?.stateUpdatedAt);
-  return get("responseCode") === "NOT_OPEN" && row.recordVerified !== true &&
-    !get("firstServerSuccessAt") && !get("firstRecordVerifiedAt") &&
-    Number.isFinite(d) && Number.isFinite(b) && Number.isFinite(f) && d <= b && b <= f;
+  return (
+    get("responseCode") === "NOT_OPEN" &&
+    row.recordVerified !== true &&
+    !get("firstServerSuccessAt") &&
+    !get("firstRecordVerifiedAt") &&
+    Number.isFinite(d) &&
+    Number.isFinite(b) &&
+    Number.isFinite(f) &&
+    d <= b &&
+    b <= f
+  );
 }
 export const FIRST_FIELDS = [
   "prepareStartedAt",

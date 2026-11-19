@@ -159,8 +159,105 @@ for (const [name, status, response, result, tone] of [
     await expand(page);
     await host(page).locator("#review").tap();
     await expect(host(page).locator("#toggle")).toHaveText(result);
+    if (name === "not open") {
+      await host(page).locator("#stop").tap();
+      await expect(host(page).locator("#toggle")).toHaveText(result);
+      expect((await formalRow(page))?.state).toBe("FAILED");
+    }
     expect(state.writes).toHaveLength(1);
   });
+test("delayed opening requires a fresh positive range after a one-second read interval", async ({
+  page,
+  context,
+}) => {
+  const state = await mock(context);
+  state.openDelayMs = 1000;
+  await load(page);
+  await expand(page);
+  await arm(page);
+  await page.clock.runFor(30000);
+  expect(state.openingReads).toHaveLength(0);
+  await page.clock.runFor(400);
+  await expect(host(page).locator("#reason")).toContainText("馆方尚未列出目标日期");
+  expect(state.writes).toHaveLength(0);
+  expect((await formalRow(page))?.attempts).toBe(0);
+  await page.clock.runFor(1100);
+  await expect(host(page).locator("#toggle")).toHaveText("162 · 已成功");
+  expect(state.openingReads).toHaveLength(2);
+  expect(state.openingReads[1] - state.openingReads[0]).toBeGreaterThanOrEqual(1000);
+  expect(state.writes).toHaveLength(1);
+  expect((await formalRow(page))?.openConfirmedAt).toBeTruthy();
+});
+
+for (const status of [200, 404]) {
+  test(`closed date or opening query ${status}: bounded reads and zero booking`, async ({
+    page,
+    context,
+  }) => {
+    const state = await mock(context);
+    state.openDelayMs = 60000;
+    state.openReadStatus = status;
+    await load(page);
+    await expand(page);
+    await arm(page);
+    await release(page);
+    if (status === 200) {
+      await expect(host(page).locator("#reason")).toContainText("馆方尚未列出目标日期");
+      await page.clock.runFor(1200);
+    }
+    await expect(host(page).locator("#toggle")).toHaveText("已停止");
+    await page.clock.runFor(12000);
+    expect(state.openingReads).toHaveLength(status === 200 ? 2 : 1);
+    expect(state.writes).toHaveLength(0);
+    expect((await formalRow(page))?.attempts).toBe(0);
+    await expect(host(page).locator("#manual")).toBeVisible();
+    expect(
+      await host(page)
+        .locator("#manual")
+        .evaluate((link) => link.dispatchEvent(new MouseEvent("click", { cancelable: true }))),
+    ).toBe(true);
+  });
+}
+
+test("recover a real P6.0 NOT_OPEN ledger after explicit successful absence review", async ({
+  page,
+  context,
+}) => {
+  const state = await mock(context);
+  state.record = false;
+  state.response = { CODE: "ParamError", MESSAGE: "未到开放时间" };
+  await load(page, true, readFileSync("userscripts/hdu-p60-lite.user.js", "utf8"));
+  await expand(page);
+  await arm(page);
+  await release(page);
+  await expect(host(page).locator("#toggle")).toHaveText("失败 · 手动接管");
+  await host(page).locator("#stop").tap();
+  await expect.poll(async () => (await formalRow(page))?.state).toBe("UNKNOWN");
+  const old = await formalRow(page);
+  expect(old?.reason).toBe("USER_STOPPED");
+  await page.reload();
+  await page.addScriptTag({ content: script });
+  await expand(page);
+  await page.clock.runFor(2100);
+  state.recordsStatus = 404;
+  await host(page).locator("#review").tap();
+  await expect(host(page).locator("#reason")).toContainText("READ_CHECK_LIMIT_OR_ERROR");
+  expect((await formalRow(page))?.state).toBe("UNKNOWN");
+  state.recordsStatus = 200;
+  await page.clock.runFor(2100);
+  await host(page).locator("#review").tap();
+  await expect(host(page).locator("#toggle")).toHaveText("失败 · 手动接管");
+  const recovered = await formalRow(page);
+  expect(recovered).toMatchObject({
+    state: "FAILED",
+    reason: "NOT_OPEN",
+    attempts: 1,
+    verifications: 3,
+    firstDispatchAt: old?.firstDispatchAt,
+    firstBusinessResultAt: old?.firstBusinessResultAt,
+  });
+  expect(state.writes).toHaveLength(1);
+});
 test("timeout and stop in-flight retain UNKNOWN; no cancellation or second write", async ({
   page,
   context,

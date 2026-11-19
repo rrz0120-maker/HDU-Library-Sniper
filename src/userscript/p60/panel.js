@@ -13,6 +13,7 @@ const PHASES = {
   STOPPED: ["已停止", "stopped"],
   EXPIRED: ["今日窗口已结束", "stopped"],
 };
+const MANUAL_STATES = ["FAILED", "STOPPED", "EXPIRED"];
 const REASONS = {
   WAITING_VIEW_ONLY:
     "这里只查看已保存的待命记录，本页不会恢复提交；若原标签页仍在运行，它可继续。停止任务可停止本浏览器今日任务。",
@@ -105,7 +106,7 @@ export function mountPanel(actions) {
   el("stop").onclick = trusted(() => actions.stop());
   el("review").onclick = trusted(() => actions.review(el("recent").value));
   el("manual").onclick = (event) => {
-    if (view?.state !== "FAILED") {
+    if (!MANUAL_STATES.includes(view?.state)) {
       event.preventDefault();
       el("reason").textContent = "仅在明确失败后人工选座；结果未知时请先检查官方预约。";
     } else {
@@ -182,7 +183,7 @@ export function mountPanel(actions) {
       el("toggle").dataset.tone = tone;
       el("state").textContent = text;
       el("reason").textContent = REASONS[next.reason] || `状态代码：${next.reason}。不会重发预约。`;
-      el("manualWrap").hidden = !["FAILED", "STOPPED", "EXPIRED"].includes(next.state);
+      el("manualWrap").hidden = !MANUAL_STATES.includes(next.state);
       const domEnd = performance.now(),
         domUpdatedAt = new Date().toISOString();
       source.recordUI(phase, { stateUpdatedAt, domUpdatedAt, domUpdateMs: domEnd - started });

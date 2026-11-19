@@ -1,7 +1,14 @@
 import { category, check, codeOf, responseCode, shanghaiDate } from "../core.js";
 import { SingleEngine } from "../p53/engine.js";
 import { PREPARE_MS, RECORD_PATH } from "../p53/policy.js";
-import { dailyTask, isP53Slot, mergeDiagnostics, openingRange, publicDiagnostics, validateDailyTask } from "./policy.js";
+import {
+  dailyTask,
+  isP53Slot,
+  mergeDiagnostics,
+  openingRange,
+  publicDiagnostics,
+  validateDailyTask,
+} from "./policy.js";
 
 const RESULTS = new Set([
   "SERVER_SUCCESS",
@@ -121,7 +128,12 @@ export class DailyEngine extends SingleEngine {
   async read(path, g, form, observe = true) {
     try {
       const body = await super.read(path, g, form, observe);
-      if (this.state === "PREPARING" && !form && path.startsWith("/Seat/Index/searchSeats?") && body?.data?.range) {
+      if (
+        this.state === "PREPARING" &&
+        !form &&
+        path.startsWith("/Seat/Index/searchSeats?") &&
+        body?.data?.range
+      ) {
         this.openRangePath = path;
         this.openRangeCategory = category(body.data);
       }
@@ -176,9 +188,13 @@ export class DailyEngine extends SingleEngine {
       this.clock.deadline();
       if (!this.clock.released()) return;
       const bounds = this.clock.bounds();
-      this.mark({ firstGatePassedAt: this.iso(), gateClockLowerMs: bounds.lower,
-        gateClockUpperMs: bounds.upper, gateClockPhoneOffsetMs: bounds.phoneOffsetMs,
-        gateClockSampleRttMs: bounds.sampleRttMs });
+      this.mark({
+        firstGatePassedAt: this.iso(),
+        gateClockLowerMs: bounds.lower,
+        gateClockUpperMs: bounds.upper,
+        gateClockPhoneOffsetMs: bounds.phoneOffsetMs,
+        gateClockSampleRttMs: bounds.sampleRttMs,
+      });
       if (this.mono() < this.nextOpeningCheckMono) return;
       check(this.openRangePath && this.openRangeCategory && this.openingChecks < 2, "OPEN_RANGE_UNCONFIRMED");
       this.busy = true;
@@ -189,8 +205,11 @@ export class DailyEngine extends SingleEngine {
       const body = await this.read(this.openRangePath, g, undefined, false);
       this.ensure(g);
       const group = category(body?.data);
-      check(group.category_id === this.openRangeCategory.category_id &&
-        group.content_id === this.openRangeCategory.content_id, "OPEN_RANGE_UNCONFIRMED");
+      check(
+        group.category_id === this.openRangeCategory.category_id &&
+          group.content_id === this.openRangeCategory.content_id,
+        "OPEN_RANGE_UNCONFIRMED",
+      );
       const result = openingRange(body?.data?.range, this.task);
       check(!this.store.stopped() && this.visible(), "FOREGROUND_REQUIRED");
       this.clock.deadline();
@@ -232,7 +251,10 @@ export class DailyEngine extends SingleEngine {
     this.emit(["LIMITED", "AUTH_REQUIRED"].includes(reason) ? "FAILED" : "UNKNOWN", reason);
   }
   async submit() {
-    check(this.openProofGeneration === this.generation && this.timings.openConfirmedAt, "OPEN_RANGE_UNCONFIRMED");
+    check(
+      this.openProofGeneration === this.generation && this.timings.openConfirmedAt,
+      "OPEN_RANGE_UNCONFIRMED",
+    );
     // Reuse the proven single POST path. Wrap only the optional observation
     // callback; no second HTTP/signature implementation and no write retries.
     const original = this.io;
