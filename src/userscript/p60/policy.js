@@ -1,4 +1,4 @@
-import { check, rangeMidnight, shanghaiDate } from "../core.js";
+import { check, integer, parseRange, rangeMidnight, shanghaiDate } from "../core.js";
 import { TASK as P53_TASK } from "../p53/policy.js";
 
 export function dailyTask(now = Date.now()) {
@@ -30,10 +30,35 @@ export function pending(row) {
   return row?.attempts === 1 && !["SUCCESS", "FAILED"].includes(row.state);
 }
 
+// First excluded date is valid preflight evidence, never an open-date permit.
+export function openingRange(raw, task) {
+  const range = parseRange(raw);
+  check(range.min <= 8 && range.max >= 22 && integer(raw.min_duration) <= 14 && integer(raw.max_duration) >= 14, "FOURTEEN_HOURS_NOT_ALLOWED");
+  const open = range.dates.includes(task.date);
+  check(open || range.maxDateExclusive === task.date, "DATE_RULE_MISMATCH");
+  return { open, maxDateExclusive: range.maxDateExclusive };
+}
+export function canReconcileNotOpen(row) {
+  if (!row || row.state !== "UNKNOWN" || row.reason !== "USER_STOPPED" || row.attempts !== 1) return false;
+  const get = (k) => row[k] ?? row.timings?.[k];
+  const d = Date.parse(get("firstDispatchAt")), b = Date.parse(get("firstBusinessResultAt"));
+  const f = Date.parse(get("uiFeedback")?.FAILED?.stateUpdatedAt);
+  return get("responseCode") === "NOT_OPEN" && row.recordVerified !== true &&
+    !get("firstServerSuccessAt") && !get("firstRecordVerifiedAt") &&
+    Number.isFinite(d) && Number.isFinite(b) && Number.isFinite(f) && d <= b && b <= f;
+}
 export const FIRST_FIELDS = [
   "prepareStartedAt",
   "armedAt",
   "scheduledAt",
+  "firstGatePassedAt",
+  "gateClockLowerMs",
+  "gateClockUpperMs",
+  "gateClockPhoneOffsetMs",
+  "gateClockSampleRttMs",
+  "openingCheckStartedAt",
+  "openConfirmedAt",
+  "confirmedMaxDateExclusive",
   "firstDispatchAt",
   "firstResponseAt",
   "firstBusinessResultAt",
@@ -71,7 +96,7 @@ export function publicDiagnostics(row) {
   if (!row) return null;
   const fields = Object.fromEntries(FIRST_FIELDS.map((key) => [key, row[key] ?? row.timings?.[key] ?? null]));
   return {
-    version: "6.0.0",
+    version: row.version || "6.0.0",
     taskDay: row.target?.day,
     date: row.target?.date,
     seat: "162",
@@ -85,6 +110,7 @@ export function publicDiagnostics(row) {
     recordVerified: row.recordVerified === true,
     ...fields,
     lastReviewedAt: row.lastReviewedAt || null,
+    reconciledAt: row.reconciledAt || null,
     uiFeedback: cleanUI(row.uiFeedback),
     events: (row.logs || [])
       .slice(-60)

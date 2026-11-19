@@ -1,7 +1,7 @@
-import { check, codeOf, responseCode, shanghaiDate } from "../core.js";
+import { category, check, codeOf, responseCode, shanghaiDate } from "../core.js";
 import { SingleEngine } from "../p53/engine.js";
 import { PREPARE_MS, RECORD_PATH } from "../p53/policy.js";
-import { dailyTask, isP53Slot, mergeDiagnostics, publicDiagnostics, validateDailyTask } from "./policy.js";
+import { dailyTask, isP53Slot, mergeDiagnostics, openingRange, publicDiagnostics, validateDailyTask } from "./policy.js";
 
 const RESULTS = new Set([
   "SERVER_SUCCESS",
@@ -120,7 +120,12 @@ export class DailyEngine extends SingleEngine {
   }
   async read(path, g, form, observe = true) {
     try {
-      return await super.read(path, g, form, observe);
+      const body = await super.read(path, g, form, observe);
+      if (this.state === "PREPARING" && !form && path.startsWith("/Seat/Index/searchSeats?") && body?.data?.range) {
+        this.openRangePath = path;
+        this.openRangeCategory = category(body.data);
+      }
+      return body;
     } catch (e) {
       this.logs.push({
         at: this.iso(),
@@ -153,9 +158,59 @@ export class DailyEngine extends SingleEngine {
       return this.view();
     }
     this.timings = { scheduledAt: new Date(this.task.open).toISOString() };
+    this.openRangePath = undefined;
+    this.openRangeCategory = undefined;
+    this.openProofGeneration = undefined;
+    this.openingChecks = 0;
+    this.nextOpeningCheckMono = 0;
     if (arm && this.wall() >= this.task.open - PREPARE_MS && this.wall() < this.task.open)
       this.store.activateDay?.();
     return super.prepare({ arm, confirmed });
+  }
+  async tick() {
+    if (!this.waiting || this.busy) return;
+    const g = this.generation;
+    try {
+      check(!this.store.stopped(), "USER_STOPPED");
+      check(this.visible(), "FOREGROUND_REQUIRED");
+      this.clock.deadline();
+      if (!this.clock.released()) return;
+      const bounds = this.clock.bounds();
+      this.mark({ firstGatePassedAt: this.iso(), gateClockLowerMs: bounds.lower,
+        gateClockUpperMs: bounds.upper, gateClockPhoneOffsetMs: bounds.phoneOffsetMs,
+        gateClockSampleRttMs: bounds.sampleRttMs });
+      if (this.mono() < this.nextOpeningCheckMono) return;
+      check(this.openRangePath && this.openRangeCategory && this.openingChecks < 2, "OPEN_RANGE_UNCONFIRMED");
+      this.busy = true;
+      this.openingChecks++;
+      this.mark({ openingCheckStartedAt: this.iso() });
+      this.emit("WAITING", "OPEN_RANGE_CHECKING");
+      // Read-only; never send a booking to test readiness. Preserve the existing clock sample.
+      const body = await this.read(this.openRangePath, g, undefined, false);
+      this.ensure(g);
+      const group = category(body?.data);
+      check(group.category_id === this.openRangeCategory.category_id &&
+        group.content_id === this.openRangeCategory.content_id, "OPEN_RANGE_UNCONFIRMED");
+      const result = openingRange(body?.data?.range, this.task);
+      check(!this.store.stopped() && this.visible(), "FOREGROUND_REQUIRED");
+      this.clock.deadline();
+      check(this.clock.released(), "NOT_RELEASED");
+      if (!result.open) {
+        check(this.openingChecks < 2, "OPEN_RANGE_UNCONFIRMED");
+        this.nextOpeningCheckMono = this.mono() + 1000;
+        this.emit("WAITING", "OPEN_RANGE_NOT_YET");
+        return;
+      }
+      this.openProofGeneration = g;
+      this.mark({ openConfirmedAt: this.iso(), confirmedMaxDateExclusive: result.maxDateExclusive });
+      this.emit("WAITING", "OPEN_RANGE_CONFIRMED");
+      this.busy = false;
+      await this.submit();
+    } catch (error) {
+      if (g === this.generation) await this.stop(codeOf(error));
+    } finally {
+      this.busy = false;
+    }
   }
   submissionHeaders(sample) {
     this.mark({
@@ -177,6 +232,7 @@ export class DailyEngine extends SingleEngine {
     this.emit(["LIMITED", "AUTH_REQUIRED"].includes(reason) ? "FAILED" : "UNKNOWN", reason);
   }
   async submit() {
+    check(this.openProofGeneration === this.generation && this.timings.openConfirmedAt, "OPEN_RANGE_UNCONFIRMED");
     // Reuse the proven single POST path. Wrap only the optional observation
     // callback; no second HTTP/signature implementation and no write retries.
     const original = this.io;
@@ -188,6 +244,7 @@ export class DailyEngine extends SingleEngine {
             ? {
                 ...options,
                 onDispatch: (at) => {
+                  check(this.openProofGeneration === this.generation, "OPEN_RANGE_UNCONFIRMED");
                   options.onDispatch?.(at);
                   this.mark({ firstDispatchAt: at });
                   this.persistDiagnostics();
@@ -212,6 +269,7 @@ export class DailyEngine extends SingleEngine {
     } finally {
       this.verifying = false;
     }
+    if (result === false && this.reviewing) this.verifiedAbsentDuringReview = true;
     if (result) {
       this.mark({ firstRecordVerifiedAt: this.iso() });
       if (this.reviewing) this.verifiedDuringReview = true;
@@ -222,9 +280,19 @@ export class DailyEngine extends SingleEngine {
     if (this.busy || this.waiting) return this.view();
     this.reviewing = true;
     this.verifiedDuringReview = false;
+    this.verifiedAbsentDuringReview = false;
     const at = this.iso();
     try {
       await super.review();
+      if (this.key && this.verifiedAbsentDuringReview && this.store.reconcileNotOpen) {
+        this.busy = true;
+        try {
+          const row = await this.store.reconcileNotOpen(this.key, this.iso());
+          if (row?.state === "FAILED") this.emit("FAILED", row.reason);
+        } finally {
+          this.busy = false;
+        }
+      }
     } finally {
       this.reviewing = false;
       this.timings.lastReviewedAt = at;
@@ -251,10 +319,11 @@ export class DailyEngine extends SingleEngine {
     if (this.identity) rows = await this.store.list();
     const stored = rows.find((r) => r.key === this.key);
     return {
-      version: "6.0.0",
+      version: "6.1.0",
       current: publicDiagnostics(
         stored || {
           target: this.task,
+          version: "6.1.0",
           state: this.state,
           reason: this.reason,
           attempts: this.attempted ? 1 : 0,
@@ -277,17 +346,23 @@ export class DailyEngine extends SingleEngine {
     }
   }
   async stop(reason = "USER_STOPPED") {
-    // An unopened second tab has no UID/key yet. The browser-day stop control
-    // stops the already authorized task without a login or any network request.
+    this.generation++;
+    this.waiting = false;
+    this.controller?.abort();
+    let row;
     try {
-      if (!this.key && this.store.active()) {
+      if (this.formal || this.store.active()) {
         this.store.stopSignal();
-        const row = await this.store.activeTask?.();
+        row = this.key ? await this.store.stop(this.key, reason) : await this.store.activeTask?.();
         this.attempted ||= row?.attempts === 1;
       }
     } catch {
       reason = "STORAGE_UNAVAILABLE";
     }
-    return super.stop(reason);
+    if (row && ["SUCCESS", "FAILED"].includes(row.state)) {
+      this.emit(row.state, row.reason);
+      return;
+    }
+    this.emit(this.state === "SUCCESS" ? "SUCCESS" : this.attempted ? "UNKNOWN" : "STOPPED", reason);
   }
 }

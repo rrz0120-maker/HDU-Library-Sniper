@@ -1,7 +1,7 @@
 import { check, TestError } from "../core.js";
 import { FormalStore } from "../p53/store.js";
 import { TASK as P53_TASK } from "../p53/policy.js";
-import { FIRST_FIELDS, isP53Slot, mergeDiagnostics, pending, suffix } from "./policy.js";
+import { canReconcileNotOpen, FIRST_FIELDS, isP53Slot, mergeDiagnostics, pending, suffix } from "./policy.js";
 
 async function oldRows(database, store) {
   let absent = false;
@@ -103,7 +103,7 @@ export class DailyStore extends FormalStore {
           );
           if (value || this.stopped() || this.spent(row.key)) return;
           won = true;
-          value = mergeDiagnostics(row, row.timings);
+          value = mergeDiagnostics({ ...row, version: "6.1.0" }, row.timings);
           store.put(value);
         } catch (e) {
           failure = e;
@@ -127,7 +127,9 @@ export class DailyStore extends FormalStore {
   finish(key, owner, patch) {
     return this.transact(key, (old) => {
       if (!old || old.owner !== owner) return null;
-      const next = old.state === "SUCCESS" ? { ...old } : { ...old, ...patch };
+      const terminal = old.state === "SUCCESS" ||
+        (old.state === "FAILED" && !(patch.state === "SUCCESS" && patch.recordVerified === true));
+      const next = terminal ? { ...old } : { ...old, ...patch };
       const d = mergeDiagnostics(old, { ...patch.timings, ...patch });
       for (const field of [...FIRST_FIELDS, "lastReviewedAt", "uiFeedback"])
         if (d[field] !== undefined) next[field] = d[field];
@@ -135,6 +137,17 @@ export class DailyStore extends FormalStore {
       next.timings = mergeDiagnostics(old.timings || {}, patch.timings || {});
       return next;
     });
+  }
+  stop(key, reason = "USER_STOPPED") {
+    return this.transact(key, (old) =>
+      old && !["SUCCESS", "FAILED"].includes(old.state)
+        ? { ...old, state: old.attempts ? "UNKNOWN" : "STOPPED", reason } : null);
+  }
+  // Only invoked by explicit review with a fresh successful official absence check.
+  reconcileNotOpen(key, at) {
+    check(this.account && key.startsWith(`${this.account}:`), "IDENTITY_CHANGED");
+    return this.transact(key, (old) => canReconcileNotOpen(old)
+      ? { ...old, state: "FAILED", reason: "NOT_OPEN", reconciledAt: at } : null);
   }
   note(key, diagnostics, logs) {
     return this.transact(key, (old) =>

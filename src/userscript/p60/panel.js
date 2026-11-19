@@ -20,6 +20,10 @@ const REASONS = {
   READ_ONLY_DEFAULT: "默认只读；每天需重新授权。",
   REHEARSAL_PASSED: "只读检查通过，没有提交预约。",
   ARMED_FOR_2000: "已正式待命。保持前台、屏幕唤醒和网络正常。",
+  OPEN_RANGE_CHECKING: "正在核对馆方实际可约日期，尚未提交预约。",
+  OPEN_RANGE_NOT_YET: "馆方尚未列出目标日期，将在安全窗口内至多再核对一次。",
+  OPEN_RANGE_CONFIRMED: "馆方已列出目标日期，准备进行唯一一次正式预约。",
+  OPEN_RANGE_UNCONFIRMED: "未能确认目标日期已开放，本次未提交预约。请查看官网。",
   HTTP_HEADERS: "HTTP响应已到达，正在解析业务结果。",
   SERVER_SUCCESS: "162 · 已受理，正在核验",
   RECORD_VERIFIED: "官方记录已核验：四楼162，08:00—22:00。",
@@ -59,7 +63,7 @@ export function mountPanel(actions) {
     #panel{clear:both;width:min(344px,calc(100vw - 16px));max-height:68vh;overflow:auto;background:#fff;border:1px solid #a5b7c1;border-radius:12px;padding:12px;margin-bottom:6px;box-shadow:0 3px 16px #0003;overflow-wrap:anywhere}
     h2{font-size:17px;margin:0 0 6px}p{margin:6px 0}small{display:block;color:#46606e}label{display:flex;gap:8px;margin:10px 0}input{width:22px;height:22px;flex-shrink:0}#actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}#start{grid-column:span 2;background:#174e68;color:white}#state{font-weight:600}summary{padding:10px 0;min-height:44px}select,textarea{width:100%;min-height:44px}textarea{height:170px;white-space:pre-wrap;font:12px/1.4 monospace}a{color:#174e68}#recentLabel{display:block}#logStatus{font-size:12px}
   </style>
-  <section id="panel" hidden aria-label="P6.0 Lite每日预约"><h2>P6.0 Lite · 四楼162</h2>
+  <section id="panel" hidden aria-label="P6.1 Lite每日预约"><h2>P6.1 Lite · 四楼162</h2>
     <p id="target"></p><small>08:00—22:00 · 14小时 / 50400秒 / 1人</small>
     <p id="clock"></p><p id="state" role="status" aria-live="polite">未启动</p><small id="reason"></small>
     <label><input type="checkbox" id="authorize"><span id="authLabel"></span></label>
@@ -178,7 +182,7 @@ export function mountPanel(actions) {
       el("toggle").dataset.tone = tone;
       el("state").textContent = text;
       el("reason").textContent = REASONS[next.reason] || `状态代码：${next.reason}。不会重发预约。`;
-      el("manualWrap").hidden = next.state !== "FAILED";
+      el("manualWrap").hidden = !["FAILED", "STOPPED", "EXPIRED"].includes(next.state);
       const domEnd = performance.now(),
         domUpdatedAt = new Date().toISOString();
       source.recordUI(phase, { stateUpdatedAt, domUpdatedAt, domUpdateMs: domEnd - started });
@@ -196,7 +200,7 @@ export function mountPanel(actions) {
       const countdown = `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
       const text = `北京时间20:00 · ${remaining ? `剩余 ${countdown}` : "已到开放时点"}`;
       if (el("clock").textContent !== text) el("clock").textContent = text;
-      if (view?.state === "WAITING" && view.task.day === authDay) {
+      if (remaining > 0 && view?.state === "WAITING" && view.task.day === authDay) {
         const label = `162 · ${countdown}`;
         if (el("toggle").textContent !== label) el("toggle").textContent = label;
       }

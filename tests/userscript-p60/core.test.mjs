@@ -9,6 +9,7 @@ import {
   publicDiagnostics,
   pending,
   FIRST_FIELDS,
+  canReconcileNotOpen,
 } from "../../src/userscript/p60/policy.js";
 import {
   checkSchedule,
@@ -114,6 +115,17 @@ class Store extends MemoryStore {
     }
     return r;
   }
+  async stop(key, reason = "USER_STOPPED") {
+    const row = this.rows.get(key);
+    if (row && !["SUCCESS", "FAILED"].includes(row.state))
+      Object.assign(row, { state: row.attempts ? "UNKNOWN" : "STOPPED", reason });
+    return row;
+  }
+  async reconcileNotOpen(key, at) {
+    const row = this.rows.get(key);
+    if (canReconcileNotOpen(row)) Object.assign(row, { state: "FAILED", reason: "NOT_OPEN", reconciledAt: at });
+    return row;
+  }
   async note(key, values) {
     const row = this.rows.get(key);
     if (row) {
@@ -130,6 +142,8 @@ function setup(day = "2026-11-18") {
   const io = {
     writes: 0,
     successRecord: true,
+    openAt: task.open,
+    openingReads: 0,
     response: { CODE: "ok", DATA: { result: "success" } },
     async request(path, opts = {}) {
       if (opts.write) {
@@ -172,13 +186,17 @@ function setup(day = "2026-11-18") {
           },
         };
       if (opts.form) return { body: mapBody() };
+      if (time.wall >= task.open) {
+        this.openingReads++;
+        if (this.openingFailure) throw new TestError(this.openingFailure);
+      }
       return {
         body: {
           data: {
             space_category: { category_id: "3", content_id: "93" },
             range: {
               advance_date: day,
-              max_date: task.date,
+              max_date: dailyTask(time.wall >= this.openAt ? task.open + 86400000 : task.open).date,
               minBeginTime: 7,
               maxEndTime: 22,
               min_duration: 1,
@@ -368,4 +386,69 @@ test("restored WAITING is view-only, never shows an armed local timer or submits
   assert.equal(s.io.writes, 0);
   await s.engine.tick();
   assert.equal(s.io.writes, 1);
+});
+
+
+test("clock open but official range closed: no write until fresh positive range", async () => {
+  const s = setup();
+  s.io.openAt = s.task.open + 1000;
+  await arm(s);
+  await fire(s);
+  assert.equal(s.io.writes, 0);
+  assert.equal(s.io.openingReads, 1);
+  assert.equal(s.engine.reason, "OPEN_RANGE_NOT_YET");
+  s.advance(999);
+  await s.engine.tick();
+  assert.equal(s.io.openingReads, 1);
+  s.advance(1);
+  await s.engine.tick();
+  await s.engine.diagWrites;
+  assert.equal(s.io.openingReads, 2);
+  assert.equal(s.io.writes, 1);
+  assert.ok(s.engine.timings.openConfirmedAt);
+});
+test("persistent closed range stops after two reads without consuming booking budget", async () => {
+  const s = setup();
+  s.io.openAt = s.task.open + 10000;
+  await arm(s);
+  await fire(s);
+  s.advance(1000);
+  await s.engine.tick();
+  await s.engine.diagWrites;
+  assert.equal(s.io.openingReads, 2);
+  assert.equal(s.io.writes, 0);
+  assert.equal(s.engine.reason, "OPEN_RANGE_UNCONFIRMED");
+  assert.equal((await s.store.get(s.engine.key)).attempts, 0);
+});
+test("opening query error fails closed", async () => {
+  const s = setup();
+  s.io.openingFailure = "HTTP_404";
+  await arm(s);
+  await fire(s);
+  s.advance(1500);
+  await s.engine.tick();
+  assert.equal(s.io.openingReads, 1);
+  assert.equal(s.io.writes, 0);
+});
+test("definite NOT_OPEN refusal survives later stop", async () => {
+  const s = setup();
+  s.io.successRecord = false;
+  s.io.response = { CODE: "ParamError", MESSAGE: "未到开放时间" };
+  await arm(s);
+  await fire(s);
+  assert.equal(s.engine.state, "FAILED");
+  await s.engine.stop();
+  assert.equal(s.engine.state, "FAILED");
+  assert.equal((await s.store.get(s.engine.key)).state, "FAILED");
+  assert.equal(s.io.writes, 1);
+});
+test("legacy NOT_OPEN recovery requires prior terminal evidence", () => {
+  const t = "2026-11-19T12:00:00.550Z";
+  const row = { state: "UNKNOWN", reason: "USER_STOPPED", attempts: 1, recordVerified: false,
+    responseCode: "NOT_OPEN", firstDispatchAt: "2026-11-19T12:00:00.440Z",
+    firstBusinessResultAt: t, uiFeedback: { FAILED: { stateUpdatedAt: "2026-11-19T12:00:00.743Z" } } };
+  assert.equal(canReconcileNotOpen(row), true);
+  assert.equal(canReconcileNotOpen({ ...row, responseCode: "TIMEOUT" }), false);
+  assert.equal(canReconcileNotOpen({ ...row, uiFeedback: {} }), false);
+  assert.equal(canReconcileNotOpen({ ...row, firstServerSuccessAt: t }), false);
 });

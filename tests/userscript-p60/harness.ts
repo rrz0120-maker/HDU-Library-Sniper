@@ -1,7 +1,7 @@
 import { expect, type BrowserContext, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-export const script = readFileSync("userscripts/hdu-p60-lite.user.js", "utf8");
+export const script = readFileSync("userscripts/hdu-p61-open-confirm.user.js", "utf8");
 export const origin = "https://hdu.huitu.zhishulib.com";
 export const OPEN = Date.parse("2026-11-18T20:00:00+08:00");
 export const BEGIN = Date.parse("2026-11-20T08:00:00+08:00") / 1000;
@@ -40,6 +40,7 @@ export async function mock(context: BrowserContext) {
     releaseRecords: [] as Array<() => Promise<void>>,
     badRange: false,
     badClock: false,
+    openDelayMs: 0,
   };
   await context.addCookies([
     {
@@ -93,7 +94,9 @@ export async function mock(context: BrowserContext) {
         data: {
           range: {
             advance_date: Date.parse(`${day(serverTime)}T00:00:00+08:00`) / 1000,
-            max_date: Date.parse(`${day(serverTime)}T00:00:00+08:00`) / 1000 + 2 * 86400,
+            max_date:
+              Date.parse(`${day(serverTime)}T00:00:00+08:00`) / 1000 +
+              (serverTime >= Date.parse(`${day(serverTime)}T20:00:00+08:00`) + state.openDelayMs ? 3 : 2) * 86400,
             minBeginTime: 7,
             maxEndTime: 22,
             min_duration: 1,
