@@ -1,8 +1,7 @@
 import { ORIGIN, codeOf } from "../core.js";
 import { Transport } from "../transport.js";
 import { IpadStore } from "../p70/store.js";
-import { IpadBookingEngine } from "../p70/engine.js";
-import { CrossModeCoordinator } from "../p71/coordinator.js";
+import { ReleaseCoordinator, ReleaseNormalEngine } from "./release-guard.js";
 import { scheduledTask } from "../p71/policy.js";
 import { ScheduledIpadStore } from "../p71/store.js";
 import { PerformanceScheduledEngine } from "./engine.js";
@@ -24,10 +23,10 @@ function bootIpadP73() {
   let panel = null;
 
   const sessionStaticCache = { roomQueryEntry: null, mappingEntry: null };
-  const coordinator = new CrossModeCoordinator();
+  const coordinator = new ReleaseCoordinator();
 
   const normalStore = new IpadStore();
-  const normalEngine = new IpadBookingEngine(new Transport(), normalStore, () => {}, { coordinator });
+  const normalEngine = new ReleaseNormalEngine(new Transport(), normalStore, () => {}, { coordinator });
   coordinator.attachNormal(normalEngine, normalStore);
 
   const createScheduled = (task) => {
@@ -124,13 +123,7 @@ function bootIpadP73() {
       void current.tick();
     }
     const toOpen = current ? current.task.open - now : Infinity;
-    const interval = current?.waiting
-      ? toOpen <= 1500
-        ? 20
-        : toOpen <= 5000
-          ? 50
-          : 250
-      : 250;
+    const interval = current?.waiting ? (toOpen <= 1500 ? 20 : toOpen <= 5000 ? 50 : 250) : 250;
     setTimeout(loop, interval);
   };
   loop();

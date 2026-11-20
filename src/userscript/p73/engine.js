@@ -1,4 +1,4 @@
-import { BOOK_PATH, category, check, codeOf, md5, responseCode } from "../core.js";
+import { BOOK_PATH, category, check, codeOf, md5 } from "../core.js";
 import {
   mergeP71Diagnostics,
   openingScheduledRange,
@@ -6,8 +6,9 @@ import {
   publicScheduledDiagnostics,
 } from "../p71/policy.js";
 import { ScheduledIpadEngine } from "../p71/engine.js";
+import { checkReleaseRead, releaseResponseCode } from "./release-guard.js";
 
-export const P73_VERSION = "7.3.0";
+export const P73_VERSION = "7.3.1";
 
 const P73_REJECTED = new Set(["SEAT_UNAVAILABLE", "NOT_OPEN", "EXISTING"]);
 const P73_PERF_FIELDS = [
@@ -68,6 +69,14 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
 
   fastSign(apiTime) {
     const tpl = this.signTemplate || this.buildSignTemplate();
+    check(
+      tpl?.uid === this.identity?.uid &&
+        tpl?.seatId === this.task.seatId &&
+        tpl.beginStr === String(this.task.begin) &&
+        tpl.durationStr === String(this.task.duration),
+      "IDENTITY_CHANGED",
+    );
+    check(Number.isSafeInteger(apiTime) && apiTime > 0, "INVALID_TIME");
     const t0 = this.mono();
     const apiTimeStr = String(apiTime);
     const token = btoa(md5(`${tpl.prefix}${apiTimeStr}${tpl.suffix}`));
@@ -95,11 +104,34 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
   }
 
   async prepare(opts = {}) {
+    if (!this.formal && !this.busy && this.coordinator?.limited) {
+      this.emit("STOPPED", "LIMITED");
+      return this.view();
+    }
     const res = await super.prepare(opts);
     if (this.waiting && this.identity?.uid) {
       this.signTemplate = this.buildSignTemplate();
     }
     return res;
+  }
+
+  async read(path, g, form, observe = true) {
+    check(!this.coordinator?.limited, "LIMITED");
+    try {
+      const body = await super.read(path, g, form, observe);
+      checkReleaseRead(path, body);
+      if (path === "/User/Center/baseInfo" && this.identity) {
+        check(body?.DATA?.is_login === true, "AUTH_REQUIRED");
+        check(String(body.DATA.uid) === this.identity.uid, "IDENTITY_CHANGED");
+      }
+      return body;
+    } catch (error) {
+      if (codeOf(error) === "LIMITED") {
+        this.staticCache.roomQueryEntry = this.staticCache.mappingEntry = null;
+        if (this.coordinator) this.coordinator.limited = true;
+      }
+      throw error;
+    }
   }
 
   async tick() {
@@ -197,6 +229,20 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
   async submit() {
     this.busy = true;
     this.waiting = false;
+    try {
+      check(this.coordinator, "CROSS_MODE_LOCK_UNAVAILABLE");
+      await this.coordinator.withCommit(() => this.submitLocked());
+    } catch (error) {
+      this.hotPathActive = false;
+      await this.stop(codeOf(error));
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  async submitLocked() {
+    this.busy = true;
+    this.waiting = false;
     this.hotPathActive = true;
     this.setStage("SUBMIT");
     const g = this.generation;
@@ -211,7 +257,7 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
       check(this.openProofGeneration === g && this.timings.openConfirmedAt, "OPEN_RANGE_UNCONFIRMED");
       check(this.formal && !this.attempted && this.visible() && !this.store.stopped(), "WRITE_GATE_CLOSED");
       if (this.coordinator) {
-        const conflict = await this.coordinator.checkForScheduled(this.identity.account);
+        const conflict = await this.coordinator.checkForScheduled(this.identity.account, this.task);
         if (conflict) {
           this.mark({ crossModeConflict: conflict });
           check(false, conflict.code);
@@ -229,6 +275,7 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
       this.attempted = true;
 
       this.ensure(g);
+      check(!this.coordinator.limited, "LIMITED");
       check(this.visible() && !this.store.stopped(), "USER_STOPPED");
       this.clock.deadline();
       check(this.clock.released(), "NOT_RELEASED");
@@ -244,6 +291,7 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
         signal: this.controller.signal,
         onDispatch: (at) => {
           this.ensure(g);
+          check(!this.coordinator.limited, "LIMITED");
           check(this.openProofGeneration === g, "OPEN_RANGE_UNCONFIRMED");
           check(this.visible() && !this.store.stopped(), "USER_STOPPED");
           this.clock.deadline();
@@ -266,7 +314,7 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
           });
         },
         onBusiness: (body, timing) => {
-          const code = responseCode(body);
+          const code = releaseResponseCode(body);
           const at = timing.businessResultAt || this.iso();
           this.mark({
             firstBusinessResultAt: at,
@@ -278,7 +326,7 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
         },
       });
       this.mark({ totalRequestMs: response.timing?.totalRequestMs ?? null });
-      reason = responseCode(response.body);
+      reason = releaseResponseCode(response.body);
       this.mark({ responseCode: reason, normalizedBusinessCode: reason, resultStateUpdatedAt: this.iso() });
     } catch (error) {
       reason = codeOf(error);
@@ -300,6 +348,7 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
       : ["LIMITED", "AUTH_REQUIRED"].includes(reason)
         ? "FAILED"
         : "UNKNOWN";
+    if (reason === "LIMITED") this.coordinator.limited = true;
     this.emit(reason === "SERVER_SUCCESS" ? "VERIFYING" : immediate, reason);
 
     if (claimed) {
@@ -316,7 +365,11 @@ export class PerformanceScheduledEngine extends ScheduledIpadEngine {
           this.busy = false;
           return;
         }
-        if (g === this.generation && !["LIMITED", "AUTH_REQUIRED"].includes(reason) && !this.store.stopped()) {
+        if (
+          g === this.generation &&
+          !["LIMITED", "AUTH_REQUIRED"].includes(reason) &&
+          !this.store.stopped()
+        ) {
           this.setStage("VERIFY");
           verification = await this.verify(g);
         }

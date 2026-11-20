@@ -2,9 +2,12 @@ import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { signedRequest, TestError } from "../../src/userscript/core.js";
-import { CrossModeCoordinator } from "../../src/userscript/p71/coordinator.js";
+import {
+  ReleaseCoordinator,
+  ReleaseNormalEngine,
+  releaseResponseCode,
+} from "../../src/userscript/p73/release-guard.js";
 import { P71_RECORD_PATH, scheduledTask } from "../../src/userscript/p71/policy.js";
-import { IpadBookingEngine } from "../../src/userscript/p70/engine.js";
 import { P73_VERSION, PerformanceScheduledEngine } from "../../src/userscript/p73/engine.js";
 
 let origFetch;
@@ -54,7 +57,11 @@ class MemStore {
     return [...this.rows.values()].filter((r) => r.key.startsWith(`${a}:`)).map((r) => structuredClone(r));
   }
   async pendingUnknown(a = this.account, ex = null) {
-    return (await this.list(a)).find((r) => r.key !== ex && r.attempts === 1 && !["SUCCESS", "FAILED"].includes(r.state)) || null;
+    return (
+      (await this.list(a)).find(
+        (r) => r.key !== ex && r.attempts === 1 && !["SUCCESS", "FAILED"].includes(r.state),
+      ) || null
+    );
   }
   async reserve(row) {
     if (await this.pendingUnknown(this.account, row.key)) throw new TestError("PREVIOUS_UNKNOWN");
@@ -66,7 +73,14 @@ class MemStore {
   }
   async claim(k, owner, at) {
     const old = this.rows.get(k);
-    if (!old || old.owner !== owner || old.state !== "WAITING" || old.attempts !== 0 || this.stopFlag || this.spentKeys.has(k))
+    if (
+      !old ||
+      old.owner !== owner ||
+      old.state !== "WAITING" ||
+      old.attempts !== 0 ||
+      this.stopFlag ||
+      this.spentKeys.has(k)
+    )
       return { won: false, value: old ? structuredClone(old) : null };
     const next = { ...old, state: "UNKNOWN", reason: "WRITE_INTENT_PERSISTED", attempts: 1, intentAt: at };
     this.rows.set(k, structuredClone(next));
@@ -124,13 +138,15 @@ function makeEnv({
   const task = scheduledTask(wall, startHour, endHour);
   const store = new MemStore(task);
   const normalStore = new MemStore(task);
-  const coordinator = new CrossModeCoordinator();
+  const coordinator = new ReleaseCoordinator({ request: async (_key, _options, run) => run({}) });
 
   const io = {
     writes: 0,
     searchPostCount: 0,
     openingReads: 0,
     recalibrations: 0,
+    uid: "9876543210",
+    recordEnvelope: {},
     openAt: open,
     lastForm: null,
     lastToken: null,
@@ -157,7 +173,12 @@ function makeEnv({
         io.lastToken = options.token;
         options.onDispatch?.(new Date(wall).toISOString());
         if (io.bookError) throw new TestError(io.bookError);
-        const timing = { dispatchToHeadersMs: 20, bodyDecodeMs: 1, businessResultAt: new Date(wall + 21).toISOString(), totalRequestMs: 21 };
+        const timing = {
+          dispatchToHeadersMs: 20,
+          bodyDecodeMs: 1,
+          businessResultAt: new Date(wall + 21).toISOString(),
+          totalRequestMs: 21,
+        };
         options.onHeaders?.(sample);
         options.onBusiness?.(io.bookResponse, timing);
         if (io.recordExists && io.bookResponse?.CODE === "ok") {
@@ -175,11 +196,13 @@ function makeEnv({
       if (path === "/User/Center/baseInfo") {
         if (wall >= open - 50000) io.recalibrations++;
         options.onHeaders?.(sample);
-        return { body: { CODE: "ok", DATA: { is_login: true, uid: "9876543210", name: "SECRET_USER" } } };
+        return { body: { CODE: "ok", DATA: { is_login: true, uid: io.uid, name: "SECRET_USER" } } };
       }
       if (path === "/Space/Category/list?LAB_JSON=1") {
         options.onHeaders?.(sample);
-        return { body: { content: { defaultItems: [{ name: "自习室", link: "/Seat/Index/searchSeats?room=1" }] } } };
+        return {
+          body: { content: { defaultItems: [{ name: "自习室", link: "/Seat/Index/searchSeats?room=1" }] } },
+        };
       }
       if (path.startsWith("/Seat/Index/searchSeats?") && !options.form) {
         if (wall >= open) io.openingReads++;
@@ -241,7 +264,7 @@ function makeEnv({
       }
       if (path === P71_RECORD_PATH) {
         options.onHeaders?.(sample);
-        return { body: { content: { defaultItems: io.records } } };
+        return { body: { ...io.recordEnvelope, content: { defaultItems: io.records } } };
       }
       throw new Error(`Unexpected path: ${path}`);
     },
@@ -255,7 +278,7 @@ function makeEnv({
     staticCache,
     coordinator,
   });
-  const normalEngine = new IpadBookingEngine(io, normalStore, () => {}, {
+  const normalEngine = new ReleaseNormalEngine(io, normalStore, () => {}, {
     wall: () => wall,
     mono: () => mono,
     visible: () => visible,
@@ -341,14 +364,21 @@ test("2: 11/20 real LIMITED regression — rehearsal caches static mapping so 19
   }
   // Cold start at 19:57 hitting HTTP 200 business LIMITED -> safe stop, 0 writes
   {
-    const env = makeEnv({ startHour: 9, endHour: 22, wallInit: Date.parse("2026-11-21T19:57:00+08:00") });
+    const env = makeEnv({
+      day: "2026-11-20",
+      startHour: 9,
+      endHour: 22,
+      wallInit: Date.parse("2026-11-20T19:57:00+08:00"),
+    });
     env.io.failSearchPostLimited = true;
-    await env.engine.prepare({ arm: true, confirmed: true, authorizedDay: "2026-11-21" });
+    await env.engine.prepare({ arm: true, confirmed: true, authorizedDay: "2026-11-20" });
     const diag = (await env.engine.diagnosticExport()).current;
     assert.equal(diag.state, "STOPPED");
     assert.equal(diag.reason, "LIMITED");
     assert.equal(diag.httpStatus, 200);
     assert.equal(diag.stoppedEndpoint, "/Seat/Index/searchSeats");
+    await env.engine.prepare({ arm: false });
+    assert.equal(env.io.searchPostCount, 1);
     assert.equal(env.io.writes, 0);
   }
 });
@@ -418,14 +448,76 @@ test("8 & 9: Safari suspension stops with 0 writes; cross-mode mutual exclusion 
   }
 });
 
-test("10: built hdu-p73-ipad-performance.user.js integrity, zero forbidden patterns, and no fixed-delay bypass", async () => {
-  const code = await readFile("userscripts/hdu-p73-ipad-performance.user.js", "utf8");
+test("10: built hdu-p731-ipad-performance.user.js integrity, zero forbidden patterns, and no fixed-delay bypass", async () => {
+  const code = await readFile("userscripts/hdu-p731-ipad-performance.user.js", "utf8");
   assert.ok(code.startsWith("// ==UserScript=="));
-  assert.match(code, /@version\s+7\.3\.0/);
+  assert.match(code, /@version\s+7\.3\.1/);
   assert.match(code, /@inject-into\s+page/);
   assert.match(code, /PerformanceScheduledEngine/);
   assert.match(code, /CrossModeCoordinator/);
   assert.doesNotMatch(code, /MockFixedDelayEngine|REAL_TRANSPORT_FORBIDDEN/);
   assert.doesNotMatch(code, /@require|GM_xmlhttpRequest|document\.cookie|lockSeats|cancelBooking|signIn/);
   assert.doesNotMatch(code, /hdu-p53-formal-booking|hdu-p60-daily-booking|P52_RECEIPT_REQUIRED/);
+});
+
+test("recalibration rejects an account switch before any booking", async () => {
+  const env = makeEnv();
+  await env.engine.prepare({ arm: true, confirmed: true, authorizedDay: env.task.day });
+  env.io.uid = "123";
+  await env.stepTo(env.task.open + 1500);
+  assert.equal(env.engine.reason, "IDENTITY_CHANGED");
+  assert.equal(env.io.writes, 0);
+});
+
+test("a task armed in another tab cannot write after a new unresolved intent appears", async () => {
+  const env = makeEnv();
+  await env.engine.prepare({ arm: true, confirmed: true, authorizedDay: env.task.day });
+  env.store.rows.set(`${env.store.account}:other-slot`, {
+    key: `${env.store.account}:other-slot`,
+    attempts: 1,
+    state: "UNKNOWN",
+  });
+  await env.stepTo(env.task.open + 1500);
+  assert.equal(env.engine.reason, "PREVIOUS_UNKNOWN");
+  assert.equal(env.io.writes, 0);
+});
+
+test("booking classification and errored official records retain genuine UNKNOWN", async () => {
+  assert.equal(releaseResponseCode({ CODE: "LIMITED" }), "LIMITED");
+  assert.equal(releaseResponseCode({ CODE: "ParamError", MESSAGE: "未到预约时间" }), "NOT_OPEN");
+  assert.equal(releaseResponseCode({ CODE: "ParamError", MESSAGE: "无法核对时间范围" }), "RESPONSE_UNKNOWN");
+  const env = makeEnv();
+  await env.engine.prepare({ arm: true, confirmed: true, authorizedDay: env.task.day });
+  env.io.recordEnvelope = { CODE: "ParamError" };
+  await env.stepTo(env.task.open + 1500);
+  assert.equal(env.io.writes, 1);
+  assert.equal(env.engine.state, "UNKNOWN");
+  assert.equal((await env.store.get(env.engine.key)).state, "UNKNOWN");
+});
+
+test("a normal tab cannot pass commit while the scheduled tab holds the same browser lock", async () => {
+  let busy = false;
+  const locks = {
+    async request(name, options, run) {
+      assert.equal(name, "hdu-ipad-booking-commit");
+      assert.equal(options.ifAvailable, true);
+      if (busy) return run(null);
+      busy = true;
+      try {
+        return await run({});
+      } finally {
+        busy = false;
+      }
+    },
+  };
+  const one = new ReleaseCoordinator(locks);
+  const two = new ReleaseCoordinator(locks);
+  await one.withCommit(async () => {
+    await assert.rejects(() => two.withCommit(() => assert.fail("second write")), /CROSS_MODE_ACTIVE_TASK/);
+  });
+  assert.equal(await two.withCommit(() => 42), 42);
+  await assert.rejects(
+    () => new ReleaseCoordinator(null).withCommit(() => assert.fail("unsafe fallback")),
+    /CROSS_MODE_LOCK_UNAVAILABLE/,
+  );
 });
