@@ -17,6 +17,7 @@ import {
   P71_PREPARE_MS,
   P71_RECALIBRATE_BEFORE_MS,
   P71_RECORD_PATH,
+  P71_REHEARSAL_DEDUPE_MS,
   P71_TIMER_DRIFT_MAX_MS,
   P71_VERSION,
   publicScheduledDiagnostics,
@@ -28,6 +29,7 @@ import {
   signedScheduledRequest,
   validateScheduledRange,
   validateScheduledTask,
+  validateStaticCacheEntry,
   verifiedScheduled162,
 } from "./policy.js";
 
@@ -41,6 +43,8 @@ export class ScheduledIpadEngine {
     this.wall = env.wall || (() => Date.now());
     this.mono = env.mono || (() => performance.now());
     this.visible = env.visible || (() => (typeof document === "undefined" ? true : document.visibilityState === "visible"));
+    this.staticCache = env.staticCache || { roomQueryEntry: null, mappingEntry: null };
+    this.coordinator = env.coordinator || null;
     this.task = env.task || scheduledTask(this.wall(), env.startHour ?? 8, env.endHour ?? 22);
     validateScheduledTask(this.task);
     this.clock = new ScheduledClock(this.wall, this.mono, this.task);
@@ -67,13 +71,40 @@ export class ScheduledIpadEngine {
     this.lastTickWall = null;
     this.lastTickMono = null;
     this.lastHttpDiag = null;
+    this.lastRehearsalAt = null;
+    this.lastRehearsalSignature = null;
+    this.duplicateActionBlocked = 0;
+    this.requestCountByEndpoint = {};
+    this.preparationStage = "IDLE";
     this.logs = [];
-    this.timings = { scheduledAt: new Date(this.task.open).toISOString() };
+    this.timings = {
+      scheduledAt: new Date(this.task.open).toISOString(),
+      preparationStage: "IDLE",
+      stoppedEndpoint: null,
+      httpStatus: null,
+      normalizedBusinessCode: null,
+      requestCountByEndpoint: {},
+      cacheHit: { roomQueryHit: false, seatMappingHit: false, valid: false, reason: "NOT_CHECKED", ageMs: null },
+      duplicateActionBlocked: 0,
+      crossModeConflict: null,
+    };
     this.diagWrites = Promise.resolve();
   }
 
   iso() {
     return new Date(this.wall()).toISOString();
+  }
+
+  setStage(stage) {
+    this.preparationStage = stage;
+    this.mark({ preparationStage: stage });
+  }
+
+  countRequest(method, path) {
+    const endpoint = String(path).split("?")[0];
+    const key = `${method} ${endpoint}`;
+    this.requestCountByEndpoint[key] = (this.requestCountByEndpoint[key] || 0) + 1;
+    this.mark({ requestCountByEndpoint: { ...this.requestCountByEndpoint } });
   }
 
   mark(values) {
@@ -106,7 +137,7 @@ export class ScheduledIpadEngine {
     if (this.state === state && this.reason === code && !["LOGIN_OK", "RANGE_OK"].includes(code)) return;
     this.state = state;
     this.reason = code;
-    this.logs.push({ at: this.iso(), state, code, ...details });
+    this.logs.push({ at: this.iso(), state, code, stage: this.preparationStage, ...details });
     if (this.logs.length > 60) this.logs.shift();
     this.notify(this.view());
     this.persistDiagnostics();
@@ -138,6 +169,7 @@ export class ScheduledIpadEngine {
     this.ensure(g);
     let httpStatus = null;
     const endpoint = String(path).split("?")[0];
+    this.countRequest(form ? "POST" : "GET", path);
     try {
       const response = await this.io.request(path, {
         form,
@@ -150,12 +182,13 @@ export class ScheduledIpadEngine {
       this.ensure(g);
       const code = responseCode(response.body);
       if (["LIMITED", "HTTP_404", "AUTH_REQUIRED"].includes(code)) {
-        this.lastHttpDiag = { httpStatus, endpoint };
+        this.lastHttpDiag = { httpStatus, endpoint, normalizedBusinessCode: code };
         check(false, code);
       }
       return response.body;
     } catch (error) {
-      this.lastHttpDiag = { httpStatus, endpoint };
+      const code = codeOf(error);
+      this.lastHttpDiag = { httpStatus, endpoint, normalizedBusinessCode: code };
       throw error;
     }
   }
@@ -176,7 +209,25 @@ export class ScheduledIpadEngine {
   }
 
   async prepare({ arm = false, confirmed = false, authorizedDay } = {}) {
-    if (this.busy || this.formal) return this.view();
+    // Guard duplicate clicks / already-active formal tasks with zero network requests.
+    if (this.busy || this.formal || this.waiting) {
+      this.duplicateActionBlocked++;
+      this.mark({ duplicateActionBlocked: this.duplicateActionBlocked });
+      return this.view();
+    }
+    const rehearsalSig = `${this.task.day}:${this.task.date}:${this.task.startHour}-${this.task.endHour}`;
+    if (
+      !arm &&
+      this.state === "READY_READ_ONLY" &&
+      this.lastRehearsalSignature === rehearsalSig &&
+      this.lastRehearsalAt != null &&
+      this.wall() - this.lastRehearsalAt < P71_REHEARSAL_DEDUPE_MS
+    ) {
+      this.duplicateActionBlocked++;
+      this.mark({ duplicateActionBlocked: this.duplicateActionBlocked });
+      return this.view();
+    }
+
     if (arm && (!confirmed || authorizedDay !== this.task.day || shanghaiDate(this.wall()) !== this.task.day)) {
       this.emit("STOPPED", "TODAY_AUTHORIZATION_REQUIRED");
       return this.view();
@@ -194,7 +245,6 @@ export class ScheduledIpadEngine {
     this.formal = arm;
     this.controller = new AbortController();
     const g = this.generation;
-    this.timings = { scheduledAt: new Date(this.task.open).toISOString() };
     this.openRangePath = null;
     this.openRangeCategory = null;
     this.openProofGeneration = null;
@@ -203,22 +253,48 @@ export class ScheduledIpadEngine {
     this.recalibrated = false;
     this.lastTickWall = null;
     this.lastTickMono = null;
+    this.lastHttpDiag = null;
+    this.timings = {
+      scheduledAt: new Date(this.task.open).toISOString(),
+      preparationStage: "PREFLIGHT_START",
+      stoppedEndpoint: null,
+      httpStatus: null,
+      normalizedBusinessCode: null,
+      requestCountByEndpoint: { ...this.requestCountByEndpoint },
+      cacheHit: { roomQueryHit: false, seatMappingHit: false, valid: false, reason: "NOT_CHECKED", ageMs: null },
+      duplicateActionBlocked: this.duplicateActionBlocked,
+      crossModeConflict: null,
+    };
     if (arm) this.store.activateDay?.();
+    this.setStage("PREFLIGHT_START");
     this.emit("PREPARING", arm ? "FORMAL_PREFLIGHT" : "READ_ONLY_REHEARSAL");
 
     try {
       validateScheduledTask(this.task);
       check(this.visible(), "FOREGROUND_REQUIRED");
       if (arm) check(!this.store.stopped(), "USER_STOPPED");
+
+      this.setStage("STORAGE_PROBE");
       await this.store.probe();
       this.ensure(g);
+
+      this.setStage("LOGIN");
       await this.login(g, true);
+
+      this.setStage("CROSS_MODE_CHECK");
+      if (this.coordinator) {
+        const conflict = await this.coordinator.checkForScheduled(this.identity.account);
+        if (conflict) {
+          this.mark({ crossModeConflict: conflict });
+          check(false, conflict.code);
+        }
+      }
       const pending = await this.store.pendingUnknown(this.identity.account, this.key);
       check(!pending, "PREVIOUS_UNKNOWN");
       const old = await this.store.get(this.key);
       this.ensure(g);
       if (old || this.store.spent(this.key)) {
-        this.timings = old?.timings || this.timings;
+        this.timings = mergeP71Diagnostics(old?.timings || {}, this.timings);
         this.mapping = old?.mapping || this.mapping;
         this.attempted ||= old?.attempts === 1;
         this.emit(old?.state || "UNKNOWN", "TASK_ALREADY_RESERVED");
@@ -226,7 +302,30 @@ export class ScheduledIpadEngine {
       }
 
       const start = this.mono();
-      const query = roomQuery(await this.read("/Space/Category/list?LAB_JSON=1", g, undefined, true));
+      const cacheCtx = {
+        account: this.identity.account,
+        day: this.task.day,
+        date: this.task.date,
+        now: this.wall(),
+      };
+      const rqCheck = validateStaticCacheEntry(this.staticCache.roomQueryEntry, cacheCtx);
+      let query;
+      if (rqCheck.valid) {
+        query = this.staticCache.roomQueryEntry.roomQuery;
+      } else {
+        this.setStage("CATEGORY_LIST");
+        query = roomQuery(await this.read("/Space/Category/list?LAB_JSON=1", g, undefined, true));
+        this.staticCache.roomQueryEntry = {
+          account: this.identity.account,
+          day: this.task.day,
+          date: this.task.date,
+          roomQuery: query,
+          verifiedAt: this.wall(),
+        };
+      }
+
+      // Always read live room range and category (never cached).
+      this.setStage("RANGE_READ");
       const body = await this.read(query, g, undefined, true);
       const rawRange = body?.data?.range;
       this.range = validateScheduledRange(rawRange, this.wall(), this.task);
@@ -239,29 +338,57 @@ export class ScheduledIpadEngine {
         mapDate: this.range.mapDate,
       });
 
-      const mapBody = await this.read(
-        "/Seat/Index/searchSeats?LAB_JSON=1",
-        g,
-        new URLSearchParams({
-          beginTime: String(this.range.mapBegin),
-          duration: "3600",
-          num: "1",
-          "space_category[category_id]": group.category_id,
-          "space_category[content_id]": group.content_id,
-        }),
-        true,
-      );
-      this.mark({ catalogReadMs: this.mono() - start });
-      const parseStart = this.mono();
-      this.mapping = resolveScheduled162(mapBody);
-      this.mark({ idResolutionMs: this.mono() - parseStart });
+      // Reuse static physical 162->62726 mapping ONLY when verified in-session, same account/day/target/category, and within TTL.
+      const mapCheck = validateStaticCacheEntry(this.staticCache.mappingEntry, { ...cacheCtx, group });
+      this.mark({
+        cacheHit: {
+          roomQueryHit: rqCheck.valid,
+          seatMappingHit: mapCheck.valid,
+          valid: mapCheck.valid,
+          reason: mapCheck.reason,
+          ageMs: mapCheck.ageMs,
+        },
+      });
+      if (mapCheck.valid) {
+        this.mapping = { ...this.staticCache.mappingEntry.mapping };
+        this.mark({ catalogReadMs: this.mono() - start, idResolutionMs: 0 });
+      } else {
+        this.setStage("SEAT_MAPPING");
+        const mapBody = await this.read(
+          "/Seat/Index/searchSeats?LAB_JSON=1",
+          g,
+          new URLSearchParams({
+            beginTime: String(this.range.mapBegin),
+            duration: "3600",
+            num: "1",
+            "space_category[category_id]": group.category_id,
+            "space_category[content_id]": group.content_id,
+          }),
+          true,
+        );
+        this.mark({ catalogReadMs: this.mono() - start });
+        const parseStart = this.mono();
+        this.mapping = resolveScheduled162(mapBody);
+        this.mark({ idResolutionMs: this.mono() - parseStart });
+        this.staticCache.mappingEntry = {
+          account: this.identity.account,
+          day: this.task.day,
+          date: this.task.date,
+          categoryId: group.category_id,
+          contentId: group.content_id,
+          mapping: { ...this.mapping },
+          verifiedAt: this.wall(),
+        };
+      }
 
+      // Always read live official records for conflict checking (never cached).
+      this.setStage("CONFLICT_CHECK");
       const conflictStart = this.mono();
       const booked = records(await this.read(P71_RECORD_PATH, g, undefined, true));
       check(scheduledOverlaps(booked, this.task).length === 0, "EXISTING");
       this.mark({ conflictReadMs: this.mono() - conflictStart });
 
-      // Validate initial clock sample and dry-run custom-duration signing (zero write).
+      this.setStage("SIGN_DRY_RUN");
       this.clock.bounds();
       const dryRun = signedScheduledRequest(
         this.task.seatId,
@@ -275,9 +402,14 @@ export class ScheduledIpadEngine {
       check(this.visible(), "FOREGROUND_REQUIRED");
 
       if (!arm) {
+        this.lastRehearsalAt = this.wall();
+        this.lastRehearsalSignature = rehearsalSig;
+        this.setStage("READY_READ_ONLY");
         this.emit("READY_READ_ONLY", "REHEARSAL_PASSED");
         return this.view();
       }
+
+      this.setStage("RESERVE");
       check(this.wall() < this.task.open && !this.store.stopped(), "PREPARE_TOO_LATE_OR_STOPPED");
       const reserved = await this.store.reserve({
         key: this.key,
@@ -298,14 +430,20 @@ export class ScheduledIpadEngine {
       this.waiting = true;
       this.lastTickWall = this.wall();
       this.lastTickMono = this.mono();
+      this.setStage("ARMED");
       this.emit("WAITING", "ARMED_FOR_2000");
     } catch (error) {
       const reason = codeOf(error);
       const diag = this.lastHttpDiag || {};
       this.lastHttpDiag = null;
+      this.mark({
+        stoppedEndpoint: diag.endpoint || null,
+        httpStatus: diag.httpStatus ?? null,
+        normalizedBusinessCode: diag.normalizedBusinessCode || reason,
+      });
       this.emit(this.attempted ? "UNKNOWN" : "STOPPED", reason, diag);
       if (arm && this.key) {
-        await this.store.finish(this.key, this.owner, { state: "STOPPED", reason }).catch(() => {});
+        await this.store.finish(this.key, this.owner, { state: "STOPPED", reason, timings: this.timings }).catch(() => {});
       }
     } finally {
       this.busy = false;
@@ -321,7 +459,6 @@ export class ScheduledIpadEngine {
       const dMono = nowMono - this.lastTickMono;
       const drift = Math.abs(dWall - dMono);
       if (drift > 0) this.mark({ maxTimerDriftMs: drift });
-      // Detect Safari background throttling / lock-screen suspension or wall-clock jump.
       if (dWall > P71_TIMER_DRIFT_MAX_MS || dMono > P71_TIMER_DRIFT_MAX_MS || drift > 500) {
         this.mark({ pageSuspendedAt: this.iso() });
         check(false, "SAFARI_TIMER_SUSPENDED");
@@ -333,6 +470,7 @@ export class ScheduledIpadEngine {
 
   async recalibrateClock(g) {
     this.busy = true;
+    this.setStage("RECALIBRATE");
     try {
       this.emit("WAITING", "RECALIBRATING_CLOCK");
       await this.read("/User/Center/baseInfo", g, undefined, true);
@@ -343,7 +481,6 @@ export class ScheduledIpadEngine {
         recalibratedOffsetMs: b.phoneOffsetMs,
         recalibratedRttMs: b.sampleRttMs,
       });
-      // Reset tick baseline after awaited network call so network latency is not misread as timer stall.
       this.lastTickWall = this.wall();
       this.lastTickMono = this.mono();
       this.emit("WAITING", "RECALIBRATED_OK");
@@ -360,15 +497,12 @@ export class ScheduledIpadEngine {
       check(this.visible(), "FOREGROUND_REQUIRED");
       this.checkTimerIntegrity();
 
-      // Recalibrate near 20:00 (at 19:59:15+) so the 19:55 sample never goes stale before release.
       const toOpen = this.task.open - this.wall();
       if (!this.recalibrated && toOpen <= P71_RECALIBRATE_BEFORE_MS && toOpen > 3000) {
         await this.recalibrateClock(g);
         return;
       }
-
       if (toOpen > 0) {
-        // Before 20:00: keep verifying sample isn't jumped/expired once recalibrated.
         if (this.recalibrated) this.clock.bounds();
         return;
       }
@@ -389,11 +523,11 @@ export class ScheduledIpadEngine {
       check(this.openRangePath && this.openRangeCategory && this.openingChecks < 2, "OPEN_RANGE_UNCONFIRMED");
 
       this.busy = true;
+      this.setStage("OPEN_CONFIRM");
       this.openingChecks++;
       this.mark({ openingCheckStartedAt: this.iso() });
       this.emit("WAITING", "OPEN_RANGE_CHECKING");
 
-      // Read-only open confirmation; observe=false preserves the fresh pre-20:00 clock sample.
       const body = await this.read(this.openRangePath, g, undefined, false);
       this.ensure(g);
       this.lastTickWall = this.wall();
@@ -422,7 +556,15 @@ export class ScheduledIpadEngine {
       this.busy = false;
       await this.submit();
     } catch (error) {
-      if (g === this.generation) await this.stop(codeOf(error));
+      const code = codeOf(error);
+      const diag = this.lastHttpDiag || {};
+      this.lastHttpDiag = null;
+      this.mark({
+        stoppedEndpoint: diag.endpoint || null,
+        httpStatus: diag.httpStatus ?? null,
+        normalizedBusinessCode: diag.normalizedBusinessCode || code,
+      });
+      if (g === this.generation) await this.stop(code);
     } finally {
       this.busy = false;
     }
@@ -431,16 +573,25 @@ export class ScheduledIpadEngine {
   async submit() {
     this.busy = true;
     this.waiting = false;
+    this.setStage("SUBMIT");
     const g = this.generation;
     const localStart = this.mono();
     let claimed = false;
     let reason = "LOCAL_ERROR";
     let verification = null;
+    let submitHttpStatus = null;
 
     try {
       this.ensure(g);
       check(this.openProofGeneration === g && this.timings.openConfirmedAt, "OPEN_RANGE_UNCONFIRMED");
       check(this.formal && !this.attempted && this.visible() && !this.store.stopped(), "WRITE_GATE_CLOSED");
+      if (this.coordinator) {
+        const conflict = await this.coordinator.checkForScheduled(this.identity.account);
+        if (conflict) {
+          this.mark({ crossModeConflict: conflict });
+          check(false, conflict.code);
+        }
+      }
       this.clock.deadline();
       check(this.clock.released(), "NOT_RELEASED");
 
@@ -463,6 +614,7 @@ export class ScheduledIpadEngine {
       );
       this.mark({ preSubmitLocalMs: this.mono() - localStart });
       this.emit("SUBMITTING", "SUBMITTING_ONCE");
+      this.countRequest("POST", BOOK_PATH);
 
       const response = await this.io.request(BOOK_PATH, {
         ...request,
@@ -478,9 +630,11 @@ export class ScheduledIpadEngine {
           this.persistDiagnostics();
         },
         onHeaders: (sample) => {
+          submitHttpStatus = sample?.status ?? null;
           this.mark({
             firstResponseAt: sample.timing?.responseAt || this.iso(),
             dispatchToHeadersMs: sample.timing?.dispatchToHeadersMs,
+            httpStatus: submitHttpStatus,
           });
         },
         onBusiness: (body, timing) => {
@@ -490,16 +644,23 @@ export class ScheduledIpadEngine {
             firstBusinessResultAt: at,
             firstServerSuccessAt: code === "SERVER_SUCCESS" ? at : undefined,
             responseCode: code,
+            normalizedBusinessCode: code,
             bodyDecodeMs: timing.bodyDecodeMs,
           });
         },
       });
       this.mark({ totalRequestMs: response.timing?.totalRequestMs ?? null });
       reason = responseCode(response.body);
-      this.mark({ responseCode: reason, resultStateUpdatedAt: this.iso() });
+      this.mark({ responseCode: reason, normalizedBusinessCode: reason, resultStateUpdatedAt: this.iso() });
     } catch (error) {
       reason = codeOf(error);
-      this.mark({ responseCode: reason, resultStateUpdatedAt: this.iso() });
+      this.mark({
+        responseCode: reason,
+        normalizedBusinessCode: reason,
+        stoppedEndpoint: "/Seat/Index/bookSeats",
+        httpStatus: submitHttpStatus,
+        resultStateUpdatedAt: this.iso(),
+      });
       if (error.timing?.totalRequestMs != null) this.mark({ totalRequestMs: error.timing.totalRequestMs });
     }
 
@@ -519,11 +680,13 @@ export class ScheduledIpadEngine {
           logs: this.logs.slice(-60),
         });
         if (persisted?.state === "SUCCESS") {
+          this.setStage("DONE");
           this.emit("SUCCESS", "RECORD_VERIFIED");
           this.busy = false;
           return;
         }
         if (g === this.generation && !["LIMITED", "AUTH_REQUIRED"].includes(reason) && !this.store.stopped()) {
+          this.setStage("VERIFY");
           verification = await this.verify(g);
         }
         const state =
@@ -541,10 +704,12 @@ export class ScheduledIpadEngine {
           logs: this.logs.slice(-60),
         });
         if (finalRow?.state === "SUCCESS") {
+          this.setStage("DONE");
           this.emit("SUCCESS", "RECORD_VERIFIED");
           this.busy = false;
           return;
         }
+        this.setStage("DONE");
         this.emit(
           g !== this.generation && state !== "SUCCESS" ? "UNKNOWN" : state,
           g !== this.generation && state !== "SUCCESS" ? "USER_STOPPED" : finalReason,
@@ -573,7 +738,11 @@ export class ScheduledIpadEngine {
   }
 
   async review() {
-    if (this.busy || this.waiting) return this.view();
+    if (this.busy || this.waiting) {
+      this.duplicateActionBlocked++;
+      this.mark({ duplicateActionBlocked: this.duplicateActionBlocked });
+      return this.view();
+    }
     this.busy = true;
     this.reviewing = true;
     this.controller = new AbortController();
@@ -667,15 +836,27 @@ export class ScheduledIpadEngine {
       platform: "ipad-safari-userscripts",
       mode: "scheduled-162",
       current: publicScheduledDiagnostics(
-        stored || {
-          target: this.task,
-          version: P71_VERSION,
-          state: this.state,
-          reason: this.reason,
-          attempts: this.attempted ? 1 : 0,
-          ...this.timings,
-          logs: this.logs,
-        },
+        stored
+          ? {
+              ...stored,
+              duplicateActionBlocked: Math.max(
+                stored.duplicateActionBlocked || 0,
+                this.duplicateActionBlocked,
+              ),
+              requestCountByEndpoint: Object.keys(this.requestCountByEndpoint).length
+                ? { ...this.requestCountByEndpoint }
+                : stored.requestCountByEndpoint || {},
+              crossModeConflict: this.timings.crossModeConflict || stored.crossModeConflict || null,
+            }
+          : {
+              target: this.task,
+              version: P71_VERSION,
+              state: this.state,
+              reason: this.reason,
+              attempts: this.attempted ? 1 : 0,
+              ...this.timings,
+              logs: this.logs,
+            },
       ),
       recent: rows
         .sort((a, b) => (b.target?.date || "").localeCompare(a.target?.date || ""))

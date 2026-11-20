@@ -2,6 +2,7 @@ import { ORIGIN, codeOf } from "../core.js";
 import { Transport } from "../transport.js";
 import { IpadStore } from "../p70/store.js";
 import { IpadBookingEngine } from "../p70/engine.js";
+import { CrossModeCoordinator } from "./coordinator.js";
 import { scheduledTask } from "./policy.js";
 import { ScheduledIpadStore } from "./store.js";
 import { ScheduledIpadEngine } from "./engine.js";
@@ -22,13 +23,25 @@ function bootIpadP71() {
   let current = null;
   let panel = null;
 
-  const normalEngine = new IpadBookingEngine(new Transport(), new IpadStore());
+  // Shared session-scoped static cache and cross-mode mutual exclusion coordinator.
+  const sessionStaticCache = { roomQueryEntry: null, mappingEntry: null };
+  const coordinator = new CrossModeCoordinator();
+
+  const normalStore = new IpadStore();
+  const normalEngine = new IpadBookingEngine(new Transport(), normalStore, () => {}, { coordinator });
+  coordinator.attachNormal(normalEngine, normalStore);
 
   const createScheduled = (task) => {
     const store = new ScheduledIpadStore(task);
-    const engine = new ScheduledIpadEngine(new Transport(), store, (v) => {
-      if (engine === current) panel?.renderScheduled(v);
-    }, { task });
+    const engine = new ScheduledIpadEngine(
+      new Transport(),
+      store,
+      (v) => {
+        if (engine === current) panel?.renderScheduled(v);
+      },
+      { task, staticCache: sessionStaticCache, coordinator },
+    );
+    coordinator.attachScheduled(engine, store);
     return engine;
   };
 
@@ -53,7 +66,7 @@ function bootIpadP71() {
   panel = mountP71Panel(
     {
       updateHours: (s, e) => {
-        if (current?.formal || current?.busy) return;
+        if (current?.formal || current?.busy || current?.waiting) return;
         if (Number.isInteger(s) && Number.isInteger(e) && s >= 0 && e <= 24 && s < e) {
           startHour = s;
           endHour = e;
@@ -63,7 +76,7 @@ function bootIpadP71() {
       start: (arm, authorizedDay, s, e) =>
         runSafe(async () => {
           if (dayCheck()) return;
-          if (!current.formal && !current.busy && (s !== startHour || e !== endHour)) {
+          if (!current.formal && !current.busy && !current.waiting && (s !== startHour || e !== endHour)) {
             if (!(Number.isInteger(s) && Number.isInteger(e) && s >= 0 && e <= 24 && s < e)) {
               current.emit("STOPPED", "INVALID_DURATION");
               return;

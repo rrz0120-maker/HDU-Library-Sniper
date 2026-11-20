@@ -44,7 +44,9 @@
     "build:userscript:p70": "node scripts/build-userscript-p70.mjs",
     "test:userscript:p70": "node --test tests/userscript-p70/*.test.mjs",
     "build:userscript:p71": "node scripts/build-userscript-p71.mjs",
-    "test:userscript:p71": "node --test tests/userscript-p71/*.test.mjs"
+    "test:userscript:p71": "node --test tests/userscript-p71/*.test.mjs",
+    "build:userscript:p711": "node scripts/build-userscript-p711.mjs",
+    "test:userscript:p711": "node --test tests/userscript-p711/*.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

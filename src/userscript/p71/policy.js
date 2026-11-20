@@ -10,7 +10,7 @@ import {
 } from "../core.js";
 import { P70_RECORD_PATH } from "../p70/policy.js";
 
-export const P71_VERSION = "7.1.0";
+export const P71_VERSION = "7.1.1";
 export const P71_SEAT = Object.freeze({
   seat: "162",
   seatId: "62726",
@@ -22,6 +22,8 @@ export const P71_RECALIBRATE_BEFORE_MS = 45000; // 19:59:15 automatic fresh cloc
 export const P71_SAMPLE_MAX_AGE_MS = 60000; // reject stale samples older than 60s
 export const P71_LATE_MS = 10000; // conservative 20:00:00–20:00:10 window
 export const P71_TIMER_DRIFT_MAX_MS = 1500; // detect Safari tab suspension / lock-screen stall
+export const P71_STATIC_CACHE_TTL_MS = 15 * 60 * 1000; // 15-minute session-only static catalog/mapping cache
+export const P71_REHEARSAL_DEDUPE_MS = 30000; // prevent duplicate back-to-back rehearsal bursts
 export const P71_RECORD_PATH = P70_RECORD_PATH;
 
 const p71Scalar = (v) => (typeof v === "string" || typeof v === "number" ? String(v) : "");
@@ -57,7 +59,10 @@ export function validateScheduledTask(task) {
   check(task && typeof task === "object", "TASK_INVALID");
   const canonical = scheduledTask(task.open, task.startHour, task.endHour);
   for (const key of Object.keys(canonical)) check(task[key] === canonical[key], "TASK_INVALID");
-  check(task.begin + task.duration === Date.parse(`${task.date}T${String(task.endHour).padStart(2, "0")}:00:00+08:00`) / 1000, "INVALID_DURATION");
+  check(
+    task.begin + task.duration === Date.parse(`${task.date}T${String(task.endHour).padStart(2, "0")}:00:00+08:00`) / 1000,
+    "INVALID_DURATION",
+  );
 }
 
 export function scheduledTaskKey(account, task) {
@@ -127,6 +132,29 @@ export function resolveScheduled162(body) {
     "MAPPING_INVALID",
   );
   return { floorId: P71_SEAT.floorId, room: room.roomName, number: P71_SEAT.seat, id: P71_SEAT.seatId };
+}
+
+export function validateStaticCacheEntry(entry, { account, day, date, group, now }) {
+  if (!entry) return { valid: false, reason: "MISSING", ageMs: null };
+  const ageMs = now - entry.verifiedAt;
+  if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > P71_STATIC_CACHE_TTL_MS)
+    return { valid: false, reason: "EXPIRED", ageMs: Number.isFinite(ageMs) ? ageMs : null };
+  if (entry.account !== account) return { valid: false, reason: "ACCOUNT_CHANGED", ageMs };
+  if (entry.day !== day || entry.date !== date) return { valid: false, reason: "TARGET_CHANGED", ageMs };
+  if (group) {
+    if (
+      !entry.mapping ||
+      entry.mapping.floorId !== P71_SEAT.floorId ||
+      entry.mapping.number !== P71_SEAT.seat ||
+      entry.mapping.id !== P71_SEAT.seatId
+    )
+      return { valid: false, reason: "MAPPING_MISSING", ageMs };
+    if (entry.categoryId !== group.category_id || entry.contentId !== group.content_id)
+      return { valid: false, reason: "CATEGORY_CHANGED", ageMs };
+  } else if (!entry.roomQuery || !entry.roomQuery.startsWith("/Seat/Index/searchSeats?")) {
+    return { valid: false, reason: "ROOM_QUERY_MISSING", ageMs };
+  }
+  return { valid: true, reason: "VALID", ageMs };
 }
 
 export function scheduledOverlaps(items, task) {
@@ -268,10 +296,24 @@ export const P71_FIRST_FIELDS = [
   "resultStateUpdatedAt",
 ];
 
+const P71_MUTABLE_DIAG_FIELDS = [
+  "preparationStage",
+  "stoppedEndpoint",
+  "httpStatus",
+  "normalizedBusinessCode",
+  "requestCountByEndpoint",
+  "cacheHit",
+  "duplicateActionBlocked",
+  "crossModeConflict",
+];
+
 export function mergeP71Diagnostics(old = {}, incoming = {}) {
   const merged = { ...old };
   for (const field of P71_FIRST_FIELDS) {
     if (merged[field] == null && incoming[field] != null) merged[field] = incoming[field];
+  }
+  for (const field of P71_MUTABLE_DIAG_FIELDS) {
+    if (incoming[field] !== undefined) merged[field] = incoming[field];
   }
   if (incoming.maxTimerDriftMs != null) {
     merged.maxTimerDriftMs = Math.max(old.maxTimerDriftMs || 0, incoming.maxTimerDriftMs);
@@ -285,6 +327,9 @@ export function mergeP71Diagnostics(old = {}, incoming = {}) {
 export function publicScheduledDiagnostics(row) {
   if (!row) return null;
   const fields = Object.fromEntries(P71_FIRST_FIELDS.map((k) => [k, row[k] ?? row.timings?.[k] ?? null]));
+  const mutable = Object.fromEntries(
+    P71_MUTABLE_DIAG_FIELDS.map((k) => [k, row[k] ?? row.timings?.[k] ?? null]),
+  );
   return {
     version: row.version || P71_VERSION,
     platform: "ipad-safari-userscripts",
@@ -303,11 +348,13 @@ export function publicScheduledDiagnostics(row) {
     recordVerified: row.recordVerified === true,
     verifications: row.verifications ?? 0,
     ...fields,
+    ...mutable,
     lastReviewedAt: row.lastReviewedAt || null,
     events: (row.logs || []).slice(-60).map((e) => ({
       at: e.at,
       state: e.state,
       code: e.code || e.reason,
+      ...(e.stage ? { stage: e.stage } : {}),
       ...(e.httpStatus != null ? { httpStatus: e.httpStatus } : {}),
       ...(e.endpoint ? { endpoint: e.endpoint } : {}),
     })),

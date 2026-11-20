@@ -26,6 +26,9 @@ export const P71_MESSAGES = {
   LIMITED: "馆方限流或拒绝访问，已停止。",
   AUTH_REQUIRED: "登录已失效，请在官网重新登录。不会自动恢复提交。",
   PREVIOUS_UNKNOWN: "存在往日未决(UNKNOWN)记录，已禁止新预约；请先核验官方记录。",
+  CROSS_MODE_ACTIVE_TASK: "普通预约模式正在执行任务，整点模式已互斥阻断。",
+  CROSS_MODE_UNKNOWN: "普通预约模式存在未决(UNKNOWN)记录，请先在普通模式核验官方记录。",
+  CROSS_MODE_CONFLICT: "另一模式存在冲突任务，已阻止重复操作。",
   TASK_ALREADY_RESERVED: "今日目标日期任务已存在，仅查看不重复启动。",
   NO_FORMAL_TASK: "尚无本日正式整点任务。",
   TODAY_AUTHORIZATION_REQUIRED: "请核对日期并勾选今日明确授权。",
@@ -102,7 +105,7 @@ export function mountP71Panel(actions, normalEngine) {
     a{color:#154c79;font-weight:500}
   </style>
   <section id="panel" hidden aria-label="P7.1 iPad 预约控制面板">
-    <h2>P7.1 iPad · 固定162整点 & 普通预约</h2>
+    <h2>P7.1.1 iPad · 固定162整点 & 普通预约</h2>
     <div class="tabs" role="tablist">
       <button id="tabSched" class="tab" role="tab" aria-selected="true">20:00 整点 162</button>
       <button id="tabNormal" class="tab" role="tab" aria-selected="false">普通预约 (P7.0)</button>

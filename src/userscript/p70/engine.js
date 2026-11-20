@@ -47,6 +47,9 @@ export class IpadBookingEngine {
     this.lastSnapshot = null;
     this.preview = null;
     this.activeKey = null;
+    this.coordinator = env.coordinator || null;
+    this.duplicateActionBlocked = 0;
+    this.crossModeConflict = null;
     this.lastHttpDiag = null;
     this.logs = [];
   }
@@ -85,7 +88,10 @@ export class IpadBookingEngine {
   }
 
   async run(fn) {
-    check(!this.busy, "BUSY");
+    if (this.busy) {
+      this.duplicateActionBlocked++;
+      check(false, "BUSY");
+    }
     this.busy = true;
     this.controller = new AbortController();
     const generation = this.generation;
@@ -244,6 +250,13 @@ export class IpadBookingEngine {
         this.wall() - this.lastSnapshot.at <= P70_PREVIEW_TTL_MS;
       const snap = reusable ? this.lastSnapshot : await this.fetchRoomsSnapshot(selection, g);
       validateSlotSelection({ date: selection.date, hour: selection.hour, hours: 1 }, snap.range, this.wall());
+      if (this.coordinator) {
+        const conflict = await this.coordinator.checkForNormal(snap.identity.account, selection);
+        if (conflict) {
+          this.crossModeConflict = conflict;
+          check(false, conflict.code);
+        }
+      }
       const pending = await this.store.pendingUnknown(snap.identity.account);
       check(!pending, "PREVIOUS_UNKNOWN");
       check(snap.conflictCount === 0, "EXISTING");
@@ -286,6 +299,13 @@ export class IpadBookingEngine {
       check(this.wall() <= preview.expires, "PREVIEW_EXPIRED");
       await this.store.probe();
       this.ensure(g);
+      if (this.coordinator) {
+        const conflict = await this.coordinator.checkForNormal(preview.account, preview.target);
+        if (conflict) {
+          this.crossModeConflict = conflict;
+          check(false, conflict.code);
+        }
+      }
       const pending = await this.store.pendingUnknown(preview.account);
       check(!pending, "PREVIOUS_UNKNOWN");
       const prior = await this.store.get(preview.key);
@@ -465,6 +485,8 @@ export class IpadBookingEngine {
           logs: this.logs,
         },
       ),
+      duplicateActionBlocked: this.duplicateActionBlocked,
+      crossModeConflict: this.crossModeConflict,
       recent: rows.slice(-7).reverse().map(publicIpadDiagnostics),
     };
   }
