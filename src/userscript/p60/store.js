@@ -1,7 +1,15 @@
 import { check, TestError } from "../core.js";
 import { FormalStore } from "../p53/store.js";
 import { TASK as P53_TASK } from "../p53/policy.js";
-import { canReconcileNotOpen, FIRST_FIELDS, isP53Slot, mergeDiagnostics, pending, suffix } from "./policy.js";
+import {
+  canReconcileNotOpen,
+  FIRST_FIELDS,
+  isP53Slot,
+  mergeDiagnostics,
+  pending,
+  suffix,
+  VERSION,
+} from "./policy.js";
 
 async function oldRows(database, store) {
   let absent = false;
@@ -103,7 +111,7 @@ export class DailyStore extends FormalStore {
           );
           if (value || this.stopped() || this.spent(row.key)) return;
           won = true;
-          value = mergeDiagnostics({ ...row, version: "6.1.0" }, row.timings);
+          value = mergeDiagnostics({ ...row, version: VERSION }, row.timings);
           store.put(value);
         } catch (e) {
           failure = e;
@@ -146,11 +154,52 @@ export class DailyStore extends FormalStore {
         : null,
     );
   }
-  // Only invoked by explicit review with a fresh successful official absence check.
-  reconcileNotOpen(key, at) {
+  async takeVerification(key, now, historical) {
+    let grant;
+    await this.transact(key, (old) => {
+      const count = old?.verifications ?? 0;
+      const recovery = historical && count >= 3 && canReconcileNotOpen(old);
+      let reason;
+      if (!old || old.state === "SUCCESS" || old.attempts !== 1) reason = "VERIFICATION_NOT_NEEDED";
+      else if (count >= 3 && !recovery) reason = "VERIFICATION_BUDGET_EXHAUSTED";
+      else if (recovery && (old.historyRecoveryChecks ?? 0) >= 1) reason = "HISTORY_RECOVERY_EXHAUSTED";
+      else if (now - Math.max(old.lastVerification ?? 0, old.lastHistoryRecoveryVerification ?? 0) < 2000)
+        reason = "VERIFICATION_COOLDOWN";
+      if (reason) {
+        grant = { reason };
+        return old && { ...old, verificationBlockReason: reason };
+      }
+      // Count the extra read atomically before sending it. Keep the original budget intact.
+      const stamp = recovery ? "lastHistoryRecoveryVerification" : "lastVerification";
+      grant = { stamp, at: now };
+      return {
+        ...old,
+        ...(recovery ? { historyRecoveryChecks: 1 } : { verifications: count + 1 }),
+        [stamp]: now,
+        verificationBlockReason: null,
+        verificationResult: "VERIFICATION_PENDING",
+        verificationErrorCode: null,
+      };
+    });
+    return grant;
+  }
+  verificationFinished(key, grant, result, errorCode) {
+    return this.transact(key, (old) =>
+      old?.[grant.stamp] === grant.at &&
+      Math.max(old.lastVerification ?? 0, old.lastHistoryRecoveryVerification ?? 0) === grant.at
+        ? { ...old, verificationResult: result, verificationErrorCode: errorCode }
+        : null,
+    );
+  }
+  // Called only by an explicit review that just read the official records.
+  reconcileNotOpen(key, at, grant) {
     check(this.account && key.startsWith(`${this.account}:`), "IDENTITY_CHANGED");
     return this.transact(key, (old) =>
-      canReconcileNotOpen(old) ? { ...old, state: "FAILED", reason: "NOT_OPEN", reconciledAt: at } : null,
+      canReconcileNotOpen(old) &&
+      old[grant.stamp] === grant.at &&
+      old.verificationResult === "VERIFICATION_RECORD_ABSENT"
+        ? { ...old, state: "FAILED", reason: "NOT_OPEN", reconciledAt: at }
+        : null,
     );
   }
   note(key, diagnostics, logs) {

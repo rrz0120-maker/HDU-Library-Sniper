@@ -49,7 +49,7 @@ if (location.origin === ORIGIN && window.top === window.self && !document.getEle
       }),
     review: (day) =>
       action(async () => {
-        if (current.busy || current.waiting) return;
+        if (current.busy || current.waiting || viewing.busy) return;
         dayCheck();
         viewing =
           day && day !== current.task.day

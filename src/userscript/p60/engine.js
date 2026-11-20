@@ -1,6 +1,6 @@
-import { category, check, codeOf, responseCode, shanghaiDate } from "../core.js";
+import { category, check, codeOf, records, responseCode, shanghaiDate } from "../core.js";
 import { SingleEngine } from "../p53/engine.js";
-import { PREPARE_MS, RECORD_PATH } from "../p53/policy.js";
+import { overlaps, PREPARE_MS, RECORD_PATH, verified162 } from "../p53/policy.js";
 import {
   dailyTask,
   isP53Slot,
@@ -8,6 +8,7 @@ import {
   openingRange,
   publicDiagnostics,
   validateDailyTask,
+  VERSION,
 } from "./policy.js";
 
 const RESULTS = new Set([
@@ -54,6 +55,8 @@ export class DailyEngine extends SingleEngine {
       });
   }
   emit(state, reason, details = {}) {
+    if (this.reviewing && ["READ_CHECK_LIMIT_OR_ERROR", "RECORD_NOT_VERIFIED"].includes(reason))
+      reason = this.verificationOutcome || reason;
     if (state === "WAITING" && !this.waiting) {
       state = "IDLE";
       reason = "WAITING_VIEW_ONLY";
@@ -284,32 +287,55 @@ export class DailyEngine extends SingleEngine {
     if (this.state === "VERIFYING") this.emit("UNKNOWN", "RECORD_NOT_VERIFIED");
   }
   async verify(g) {
+    const historical = this.reviewing && this.task.day < shanghaiDate(this.wall());
+    const grant = await this.store.takeVerification(this.key, this.wall(), historical);
+    if (grant.reason) {
+      this.verificationOutcome = grant.reason;
+      return null;
+    }
+    const start = this.mono();
     this.verifying = true;
-    let result;
+    let result = null,
+      errorCode = null;
     try {
-      result = await super.verify(g);
+      const body = await this.read(RECORD_PATH, g, undefined, false);
+      check(body?.CODE === undefined || body.CODE === "ok", "RECORDS_UNKNOWN");
+      const items = records(body);
+      result = verified162(items, this.mapping, this.task);
+      this.verificationOutcome = result
+        ? "VERIFICATION_RECORD_MATCHED"
+        : overlaps(items, this.task).length
+          ? "VERIFICATION_RECORD_CONFLICT"
+          : "VERIFICATION_RECORD_ABSENT";
+      if (result) {
+        this.mark({ firstRecordVerifiedAt: this.iso() });
+        if (this.reviewing) this.verifiedDuringReview = true;
+      }
+    } catch (error) {
+      errorCode = codeOf(error);
+      this.verificationOutcome = "VERIFICATION_READ_ERROR";
     } finally {
+      this.timings.verificationMs = this.mono() - start;
       this.verifying = false;
     }
-    if (result === false && this.reviewing) this.verifiedAbsentDuringReview = true;
-    if (result) {
-      this.mark({ firstRecordVerifiedAt: this.iso() });
-      if (this.reviewing) this.verifiedDuringReview = true;
-    }
+    await this.store.verificationFinished(this.key, grant, this.verificationOutcome, errorCode);
+    if (this.reviewing && g === this.generation && this.verificationOutcome === "VERIFICATION_RECORD_ABSENT")
+      this.absenceProof = grant;
     return result;
   }
   async review() {
     if (this.busy || this.waiting) return this.view();
     this.reviewing = true;
     this.verifiedDuringReview = false;
-    this.verifiedAbsentDuringReview = false;
+    this.absenceProof = null;
+    this.verificationOutcome = null;
     const at = this.iso();
     try {
       await super.review();
-      if (this.key && this.verifiedAbsentDuringReview && this.store.reconcileNotOpen) {
+      if (this.key && this.absenceProof) {
         this.busy = true;
         try {
-          const row = await this.store.reconcileNotOpen(this.key, this.iso());
+          const row = await this.store.reconcileNotOpen(this.key, this.iso(), this.absenceProof);
           if (row?.state === "FAILED") this.emit("FAILED", row.reason);
         } finally {
           this.busy = false;
@@ -341,11 +367,11 @@ export class DailyEngine extends SingleEngine {
     if (this.identity) rows = await this.store.list();
     const stored = rows.find((r) => r.key === this.key);
     return {
-      version: "6.1.0",
+      version: VERSION,
       current: publicDiagnostics(
         stored || {
           target: this.task,
-          version: "6.1.0",
+          version: VERSION,
           state: this.state,
           reason: this.reason,
           attempts: this.attempted ? 1 : 0,
@@ -385,6 +411,7 @@ export class DailyEngine extends SingleEngine {
       this.emit(row.state, row.reason);
       return;
     }
-    this.emit(this.state === "SUCCESS" ? "SUCCESS" : this.attempted ? "UNKNOWN" : "STOPPED", reason);
+    if (!["SUCCESS", "FAILED"].includes(this.state))
+      this.emit(this.attempted ? "UNKNOWN" : "STOPPED", reason);
   }
 }

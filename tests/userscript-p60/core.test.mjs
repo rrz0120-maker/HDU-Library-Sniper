@@ -20,6 +20,7 @@ import {
 } from "../../src/userscript/p53/policy.js";
 import { signedRequest, TestError } from "../../src/userscript/core.js";
 import { DailyEngine } from "../../src/userscript/p60/engine.js";
+import { DailyStore } from "../../src/userscript/p60/store.js";
 import { MemoryStore, mapBody } from "../userscript-p53/fixtures.mjs";
 
 for (const [day, target] of [
@@ -91,6 +92,15 @@ test("diagnostic allowlist excludes identity, authentication and request data", 
 });
 
 class Store extends MemoryStore {
+  takeVerification = DailyStore.prototype.takeVerification;
+  verificationFinished = DailyStore.prototype.verificationFinished;
+  reconcileNotOpen = DailyStore.prototype.reconcileNotOpen;
+  async transact(key, change) {
+    const old = await this.get(key);
+    const next = change(old);
+    if (next) this.rows.set(key, next);
+    return next || old;
+  }
   bind(account) {
     this.account = account;
   }
@@ -119,12 +129,6 @@ class Store extends MemoryStore {
     const row = this.rows.get(key);
     if (row && !["SUCCESS", "FAILED"].includes(row.state))
       Object.assign(row, { state: row.attempts ? "UNKNOWN" : "STOPPED", reason });
-    return row;
-  }
-  async reconcileNotOpen(key, at) {
-    const row = this.rows.get(key);
-    if (canReconcileNotOpen(row))
-      Object.assign(row, { state: "FAILED", reason: "NOT_OPEN", reconciledAt: at });
     return row;
   }
   async note(key, values) {
@@ -458,4 +462,53 @@ test("legacy NOT_OPEN recovery requires prior terminal evidence", () => {
   assert.equal(canReconcileNotOpen({ ...row, responseCode: "TIMEOUT" }), false);
   assert.equal(canReconcileNotOpen({ ...row, uiFeedback: {} }), false);
   assert.equal(canReconcileNotOpen({ ...row, firstServerSuccessAt: t }), false);
+});
+
+test("historical recovery permit is separate, explicit, and consumed even on read error", async () => {
+  const store = new Store();
+  store.bind("account");
+  const key = "account:2026-11-21:08:00-22:00";
+  const now = Date.parse("2026-11-20T01:04:19Z");
+  const row = {
+    key,
+    state: "UNKNOWN",
+    reason: "USER_STOPPED",
+    attempts: 1,
+    recordVerified: false,
+    responseCode: "NOT_OPEN",
+    firstDispatchAt: "2026-11-19T12:00:00.440Z",
+    firstBusinessResultAt: "2026-11-19T12:00:00.550Z",
+    uiFeedback: { FAILED: { stateUpdatedAt: "2026-11-19T12:00:00.743Z" } },
+    verifications: 3,
+    lastVerification: now - 3000,
+  };
+  store.rows.set(key, row);
+  for (const missingEvidence of [
+    { responseCode: "HTTP_404" },
+    { responseCode: "TIMEOUT" },
+    { responseCode: "SERVER_SUCCESS" },
+    { firstServerSuccessAt: row.firstBusinessResultAt },
+    { recordVerified: undefined },
+    { uiFeedback: {} },
+  ]) {
+    store.rows.set(key, { ...row, ...missingEvidence });
+    assert.equal((await store.takeVerification(key, now, true)).reason, "VERIFICATION_BUDGET_EXHAUSTED");
+    assert.equal((await store.get(key)).historyRecoveryChecks, undefined);
+    assert.equal((await store.get(key)).state, "UNKNOWN");
+  }
+  store.rows.set(key, row);
+  assert.equal((await store.takeVerification(key, now, false)).reason, "VERIFICATION_BUDGET_EXHAUSTED");
+  const grant = await store.takeVerification(key, now, true);
+  assert.equal(grant.stamp, "lastHistoryRecoveryVerification");
+  await store.verificationFinished(key, grant, "VERIFICATION_READ_ERROR", "HTTP_404");
+  await store.reconcileNotOpen(key, new Date(now).toISOString(), grant);
+  assert.equal((await store.takeVerification(key, now + 3000, true)).reason, "HISTORY_RECOVERY_EXHAUSTED");
+  assert.deepEqual(publicDiagnostics(await store.get(key)), {
+    ...publicDiagnostics(row),
+    historyRecoveryChecks: 1,
+    lastHistoryRecoveryVerification: now,
+    verificationBlockReason: "HISTORY_RECOVERY_EXHAUSTED",
+    verificationResult: "VERIFICATION_READ_ERROR",
+    verificationErrorCode: "HTTP_404",
+  });
 });

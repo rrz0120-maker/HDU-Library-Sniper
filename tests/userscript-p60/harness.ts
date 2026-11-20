@@ -1,7 +1,7 @@
 import { expect, type BrowserContext, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-export const script = readFileSync("userscripts/hdu-p61-open-confirm.user.js", "utf8");
+export const script = readFileSync("userscripts/hdu-p611-history-recovery.user.js", "utf8");
 export const origin = "https://hdu.huitu.zhishulib.com";
 export const OPEN = Date.parse("2026-11-18T20:00:00+08:00");
 export const BEGIN = Date.parse("2026-11-20T08:00:00+08:00") / 1000;
@@ -229,9 +229,9 @@ export async function dbRow(page: Page, database: string, store: string, id: str
 }
 export const formalRow = (p: Page) => dbRow(p, "hdu-p60-daily-booking", "tasks", key);
 export const host = (p: Page) => p.locator("#hdu-p60-host");
-export async function load(page: Page, withHistory = true, source = script) {
-  await page.clock.install({ time: OPEN - 31000 });
-  await page.clock.pauseAt(OPEN - 30000);
+export async function load(page: Page, withHistory = true, source = script, at = OPEN - 30000) {
+  await page.clock.install({ time: at - 1000 });
+  await page.clock.pauseAt(at);
   await page.goto(`${origin}/#!/Space/Category/list`);
   if (withHistory) await seed(page);
   await page.addScriptTag({ content: source });

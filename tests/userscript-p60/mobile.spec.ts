@@ -241,8 +241,9 @@ test("recover a real P6.0 NOT_OPEN ledger after explicit successful absence revi
   await page.clock.runFor(2100);
   state.recordsStatus = 404;
   await host(page).locator("#review").tap();
-  await expect(host(page).locator("#reason")).toContainText("READ_CHECK_LIMIT_OR_ERROR");
+  await expect(host(page).locator("#reason")).toContainText("官方记录读取失败");
   expect((await formalRow(page))?.state).toBe("UNKNOWN");
+  expect((await formalRow(page))?.verificationErrorCode).toBe("HTTP_404");
   state.recordsStatus = 200;
   await page.clock.runFor(2100);
   await host(page).locator("#review").tap();

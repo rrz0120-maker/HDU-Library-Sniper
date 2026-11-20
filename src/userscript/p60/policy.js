@@ -1,6 +1,8 @@
 import { check, integer, parseRange, rangeMidnight, shanghaiDate } from "../core.js";
 import { TASK as P53_TASK } from "../p53/policy.js";
 
+export const VERSION = "6.1.1";
+
 export function dailyTask(now = Date.now()) {
   check(Number.isSafeInteger(now), "INVALID_TIME");
   const day = shanghaiDate(now),
@@ -42,14 +44,14 @@ export function openingRange(raw, task) {
   return { open, maxDateExclusive: range.maxDateExclusive };
 }
 export function canReconcileNotOpen(row) {
-  if (!row || row.state !== "UNKNOWN" || row.reason !== "USER_STOPPED" || row.attempts !== 1) return false;
+  if (row?.state !== "UNKNOWN" || row.reason !== "USER_STOPPED" || row.attempts !== 1) return false;
   const get = (k) => row[k] ?? row.timings?.[k];
   const d = Date.parse(get("firstDispatchAt")),
     b = Date.parse(get("firstBusinessResultAt"));
   const f = Date.parse(get("uiFeedback")?.FAILED?.stateUpdatedAt);
   return (
     get("responseCode") === "NOT_OPEN" &&
-    row.recordVerified !== true &&
+    row.recordVerified === false &&
     !get("firstServerSuccessAt") &&
     !get("firstRecordVerifiedAt") &&
     Number.isFinite(d) &&
@@ -119,6 +121,13 @@ export function publicDiagnostics(row) {
     state: row.state,
     reason: row.reason,
     attempts: row.attempts ?? 0,
+    verifications: row.verifications ?? 0,
+    lastVerification: row.lastVerification ?? null,
+    historyRecoveryChecks: row.historyRecoveryChecks ?? 0,
+    lastHistoryRecoveryVerification: row.lastHistoryRecoveryVerification ?? null,
+    verificationBlockReason: row.verificationBlockReason ?? null,
+    verificationResult: row.verificationResult ?? null,
+    verificationErrorCode: row.verificationErrorCode ?? null,
     recordVerified: row.recordVerified === true,
     ...fields,
     lastReviewedAt: row.lastReviewedAt || null,

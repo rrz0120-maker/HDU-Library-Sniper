@@ -41,6 +41,12 @@ const REASONS = {
   USER_STOPPED: "已停止后续自动写入。停止不等于撤销预约。",
   FOREGROUND_REQUIRED: "页面离开前台，已停止；不会自动恢复。",
   RECORD_NOT_VERIFIED: "结果待确认，请检查官方预约。不重新提交。",
+  VERIFICATION_BUDGET_EXHAUSTED: "普通核验额度已用完，请在官方我的预约中确认。",
+  HISTORY_RECOVERY_EXHAUSTED: "本条历史任务的一次补充核验已使用，请在官方我的预约中确认。",
+  VERIFICATION_COOLDOWN: "请间隔至少两秒再核验。",
+  VERIFICATION_READ_ERROR: "官方记录读取失败。原有任务状态继续保留。",
+  VERIFICATION_RECORD_CONFLICT: "官方存在重叠记录，结果仍需人工确认。",
+  VERIFICATION_RECORD_ABSENT: "官方未发现匹配记录，原有任务保护继续保留。",
   HTTP_404: "预约或查询接口返回404。若已提交，结果待确认；不重发。",
   TIMEOUT: "请求超时，服务器可能已经处理，请核对官方预约。",
   NETWORK_ERROR: "网络异常，结果待确认，不重发。",
@@ -64,7 +70,7 @@ export function mountPanel(actions) {
     #panel{clear:both;width:min(344px,calc(100vw - 16px));max-height:68vh;overflow:auto;background:#fff;border:1px solid #a5b7c1;border-radius:12px;padding:12px;margin-bottom:6px;box-shadow:0 3px 16px #0003;overflow-wrap:anywhere}
     h2{font-size:17px;margin:0 0 6px}p{margin:6px 0}small{display:block;color:#46606e}label{display:flex;gap:8px;margin:10px 0}input{width:22px;height:22px;flex-shrink:0}#actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}#start{grid-column:span 2;background:#174e68;color:white}#state{font-weight:600}summary{padding:10px 0;min-height:44px}select,textarea{width:100%;min-height:44px}textarea{height:170px;white-space:pre-wrap;font:12px/1.4 monospace}a{color:#174e68}#recentLabel{display:block}#logStatus{font-size:12px}
   </style>
-  <section id="panel" hidden aria-label="P6.1 Lite每日预约"><h2>P6.1 Lite · 四楼162</h2>
+  <section id="panel" hidden aria-label="P6.1.1 Lite每日预约"><h2>P6.1.1 Lite · 四楼162</h2>
     <p id="target"></p><small>08:00—22:00 · 14小时 / 50400秒 / 1人</small>
     <p id="clock"></p><p id="state" role="status" aria-live="polite">未启动</p><small id="reason"></small>
     <label><input type="checkbox" id="authorize"><span id="authLabel"></span></label>
