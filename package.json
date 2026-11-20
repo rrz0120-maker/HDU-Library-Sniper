@@ -42,7 +42,9 @@
     "test:userscript:p61": "node --test tests/userscript-p60/*.test.mjs",
     "test:userscript:p61:browser": "playwright test --config playwright.p60.config.ts",
     "build:userscript:p70": "node scripts/build-userscript-p70.mjs",
-    "test:userscript:p70": "node --test tests/userscript-p70/*.test.mjs"
+    "test:userscript:p70": "node --test tests/userscript-p70/*.test.mjs",
+    "build:userscript:p71": "node scripts/build-userscript-p71.mjs",
+    "test:userscript:p71": "node --test tests/userscript-p71/*.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
