@@ -236,7 +236,10 @@ export function md5(source) {
     .join("");
 }
 export function signedRequest(seatId, uid, begin, apiTime, duration = 3600) {
-  check(duration === 3600 || duration === 50400, "INVALID_DURATION");
+  check(
+    Number.isInteger(duration) && duration >= 3600 && duration <= 54000 && duration % 3600 === 0,
+    "INVALID_DURATION",
+  );
   const source = `post&${BOOK_PATH}&api_time${apiTime}&beginTime${begin}&duration${duration}&is_recommend0&seatBookers[0]${uid}&seats[0]${seatId}`;
   return {
     token: btoa(md5(source)),

@@ -1,38 +1,6 @@
-import { build } from "vite";
-import { readFile, writeFile } from "node:fs/promises";
+// Restore the frozen successful artifact from its pinned source commit.
+import { execFileSync } from "node:child_process";
+import { writeFile } from "node:fs/promises";
 const path = "userscripts/hdu-p60-lite.user.js";
-await build({
-  configFile: false,
-  publicDir: false,
-  logLevel: "warn",
-  build: {
-    target: "firefox115",
-    minify: false,
-    emptyOutDir: false,
-    outDir: "userscripts",
-    lib: {
-      entry: "src/userscript/p60/entry.js",
-      name: "HduP60",
-      formats: ["iife"],
-      fileName: () => "hdu-p60-lite.user.js",
-    },
-  },
-});
-const metadata = `// ==UserScript==
-// @name         杭电图书馆 P6.0 Lite 每日162
-// @namespace    https://github.com/rrz0120-maker/HDU-Library-Sniper/p60
-// @version      6.0.0
-// @description  默认只读；每日明确授权，20:00后最多一次预约后天四楼162 08:00–22:00；实时悬浮反馈，不重试不换座。
-// @match        https://hdu.huitu.zhishulib.com/*
-// @grant        none
-// @noframes
-// @run-at       document-idle
-// @updateURL    none
-// @license      MIT
-// ==/UserScript==
-`;
-const code = metadata + (await readFile(path, "utf8"));
-if (/@require|GM_xmlhttpRequest|document\.cookie|lockSeats|cancelBooking|signIn/.test(code))
-  throw new Error("Invalid P6.0 artifact");
-await writeFile(path, code);
-console.log(`${path} (${Buffer.byteLength(code)} bytes)`);
+await writeFile(path, execFileSync("git", ["show", `4313031b6c5059003314de482207ba539e1b06ca:${path}`]));
+console.log(`${path} restored from the P6.1.1 baseline`);

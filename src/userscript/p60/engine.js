@@ -1,417 +1,353 @@
-import { category, check, codeOf, records, responseCode, shanghaiDate } from "../core.js";
-import { SingleEngine } from "../p53/engine.js";
-import { overlaps, PREPARE_MS, RECORD_PATH, verified162 } from "../p53/policy.js";
 import {
-  dailyTask,
-  isP53Slot,
-  mergeDiagnostics,
-  openingRange,
+  BOOK_PATH,
+  check,
+  codeOf,
+  records,
+  roomQuery,
+  shanghaiDate,
+  signedRequest,
+  TestError,
+} from "../core.js";
+import { accountKey } from "../ledger.js";
+import { RECORD_PATH, verified162 } from "../p53/policy.js";
+import {
+  banUntil,
+  bookingResult,
+  nextCheckMs,
+  preparationRange,
   publicDiagnostics,
+  REASONS,
+  restoredReport,
   validateDailyTask,
-  VERSION,
 } from "./policy.js";
+import { DailyStore, recall, remember, slotKey } from "./store.js";
 
-const RESULTS = new Set([
-  "SERVER_SUCCESS",
-  "SEAT_UNAVAILABLE",
-  "NOT_OPEN",
-  "EXISTING",
-  "LIMITED",
-  "AUTH_REQUIRED",
-  "HTTP_404",
-  "TIMEOUT",
-  "NETWORK_ERROR",
-  "RESPONSE_UNKNOWN",
-]);
-export class DailyEngine extends SingleEngine {
-  constructor(io, store, notify, env = {}) {
-    super(io, store, notify, { ...env, task: env.task || dailyTask((env.wall || Date.now)()) });
-    validateDailyTask(this.task);
-    this.canWrite = env.canWrite !== false;
-    this.timings.scheduledAt = new Date(this.task.open).toISOString();
-    this.diagWrites = Promise.resolve();
-  }
-  iso() {
-    return new Date(this.wall()).toISOString();
-  }
-  ensure(g) {
-    super.ensure(g);
-    if (this.formal && !this.reviewing)
-      check(shanghaiDate(this.wall()) === this.task.day, "AUTHORIZATION_EXPIRED");
-  }
-  mark(values) {
-    this.timings = mergeDiagnostics(this.timings, values);
-  }
-  persistDiagnostics() {
-    if (!this.key) return;
-    const key = this.key,
-      values = structuredClone(this.timings),
-      logs = this.logs.slice();
-    // Metadata writes never delay first response feedback or the booking fetch.
-    this.diagWrites = this.diagWrites
-      .then(() => this.store.note(key, values, logs))
-      .catch(() => {
-        this.diagnosticStorageFailed = true;
-      });
-  }
-  emit(state, reason, details = {}) {
-    if (this.reviewing && ["READ_CHECK_LIMIT_OR_ERROR", "RECORD_NOT_VERIFIED"].includes(reason))
-      reason = this.verificationOutcome || reason;
-    if (state === "WAITING" && !this.waiting) {
-      state = "IDLE";
-      reason = "WAITING_VIEW_ONLY";
-    }
-    if (reason === "SUBMITTING_ONCE") state = "SUBMITTING";
-    if (reason === "SERVER_SUCCESS" && state !== "SUCCESS") state = "VERIFYING";
-    if (
-      ["SEAT_UNAVAILABLE", "NOT_OPEN", "EXISTING"].includes(reason) &&
-      this.attempted &&
-      state === "UNKNOWN"
-    )
-      state = "VERIFYING";
-    if (
-      ["MISSED_WINDOW", "PREPARE_WINDOW", "AUTHORIZATION_EXPIRED", "PREPARE_TOO_LATE_OR_STOPPED"].includes(
-        reason,
-      ) &&
-      !this.attempted
-    )
-      state = "EXPIRED";
-    if (reason === "FORMAL_PREFLIGHT" || reason === "READ_ONLY_REHEARSAL")
-      this.mark({ prepareStartedAt: this.iso() });
-    if (reason === "ARMED_FOR_2000") this.mark({ armedAt: this.iso() });
-    const http = this.timings.http;
-    if (http)
-      this.mark({
-        dispatchToHeadersMs: http.dispatchToHeadersMs,
-        bodyDecodeMs: http.bodyDecodeMs,
-        totalRequestMs: http.totalRequestMs,
-      });
-    if (this.attempted && RESULTS.has(reason))
-      this.mark({ responseCode: reason, resultStateUpdatedAt: this.iso() });
-    if (this.reviewing && reason === "RECORD_VERIFIED" && !this.verifiedDuringReview)
-      reason = "REVIEW_SAVED_RESULT";
-    if (this.state === state && this.reason === reason && !["LOGIN_OK", "RANGE_OK"].includes(reason)) return;
-    this.state = state;
-    this.reason = reason;
-    const category = this.verifying
-      ? "RECORD_VERIFICATION"
-      : this.reviewing
-        ? "REVIEW"
-        : reason === "HTTP_HEADERS"
-          ? "BOOKING_HTTP"
-          : ["HTTP_404", "TIMEOUT", "NETWORK_ERROR", "HTTP_ERROR", "STOPPED"].includes(reason) &&
-              this.attempted
-            ? "BOOKING_REQUEST_ERROR"
-            : RESULTS.has(reason) && this.attempted
-              ? "BOOKING_BUSINESS_RESULT"
-              : reason === "RECORD_VERIFIED"
-                ? "RECORD_VERIFICATION"
-                : ["UI_REATTACHED", "PAGE_CONTEXT_END", "PAGE_ERROR_OBSERVED"].includes(reason)
-                  ? "PAGE_OBSERVATION"
-                  : state === "PREPARING" || (!this.attempted && !this.waiting)
-                    ? "QUERY_OR_PREPARATION"
-                    : "TASK";
-    this.logs.push({ at: this.iso(), category, state, reason, ...details });
-    if (this.logs.length > 60) this.logs.shift();
-    this.notify(this.view());
-    this.persistDiagnostics();
+const unresolved = new Set(["TIMEOUT", "NETWORK_ERROR", "HTTP_404", "HTTP_ERROR", "RESPONSE_UNKNOWN"]);
+
+export class DailyEngine {
+  constructor(io, notify = () => {}, env = {}) {
+    this.io = io;
+    this.notify = notify;
+    this.wall = env.wall || (() => Date.now());
+    this.mono = env.mono || (() => performance.now());
+    this.visible = env.visible || (() => !document.hidden);
+    this.locks = env.locks || globalThis.navigator?.locks;
+    this.openStore = env.openStore || ((name) => new DailyStore(name));
+    this.report = recall() || { state: "IDLE", reason: "IDLE", attempts: 0 };
+    this.running = false;
+    this.waiting = false;
+    this.reviewing = false;
+    this.message = "";
+    this.storeName = null;
+    this.limitedUntil = 0;
+    this.pageSuspended = false;
   }
   view() {
     return {
-      ...super.view(),
-      task: this.task,
-      attempts: this.attempted ? 1 : 0,
-      diagnosticStorageFailed: !!this.diagnosticStorageFailed,
+      ...publicDiagnostics(this.report),
+      message: this.message,
+      businessCode: this.report.businessCode ?? null,
+      running: this.running,
+      waiting: this.waiting,
+      reviewing: this.reviewing,
     };
   }
-  async login(g, observe = true) {
-    await super.login(g, observe);
-    this.store.bind(this.identity.account);
-  }
-  async read(path, g, form, observe = true) {
+  render() {
     try {
-      const body = await super.read(path, g, form, observe);
-      if (
-        this.state === "PREPARING" &&
-        !form &&
-        path.startsWith("/Seat/Index/searchSeats?") &&
-        body?.data?.range
-      ) {
-        this.openRangePath = path;
-        this.openRangeCategory = category(body.data);
-      }
-      return body;
-    } catch (e) {
-      this.logs.push({
-        at: this.iso(),
-        category: path === RECORD_PATH ? "RECORD_QUERY_ERROR" : "QUERY_REQUEST_ERROR",
-        state: this.state,
-        reason: codeOf(e),
-      });
-      this.persistDiagnostics();
-      throw e;
+      this.notify(this.view());
+    } catch {
+      this.report.diagnosticStorageFailed = true;
     }
   }
-  async prepare({ arm = false, confirmed = false, authorizedDay } = {}) {
-    if (this.busy || this.formal) return this.view();
-    if (
-      arm &&
-      (!this.canWrite ||
-        !confirmed ||
-        authorizedDay !== this.task.day ||
-        shanghaiDate(this.wall()) !== this.task.day)
-    ) {
-      this.emit("STOPPED", "TODAY_AUTHORIZATION_REQUIRED");
-      return this.view();
-    }
-    if (arm && isP53Slot(this.task)) {
-      this.emit("STOPPED", "P53_SLOT_FROZEN");
-      return this.view();
-    }
-    if (arm && this.wall() < this.task.open - PREPARE_MS) {
-      this.emit("IDLE", "PREPARE_TOO_EARLY");
-      return this.view();
-    }
-    this.timings = { scheduledAt: new Date(this.task.open).toISOString() };
-    this.openRangePath = undefined;
-    this.openRangeCategory = undefined;
-    this.openProofGeneration = undefined;
-    this.openingChecks = 0;
-    this.nextOpeningCheckMono = 0;
-    if (arm && this.wall() >= this.task.open - PREPARE_MS && this.wall() < this.task.open)
-      this.store.activateDay?.();
-    return super.prepare({ arm, confirmed });
+  saveDisplay() {
+    if (!remember(this.report, this.storeName)) this.report.diagnosticStorageFailed = true;
   }
-  async tick() {
-    if (!this.waiting || this.busy) return;
-    const g = this.generation;
+  emit(state, reason) {
+    Object.assign(this.report, { state, reason });
+    this.saveDisplay();
+    this.render();
+  }
+  saveReceipt() {
     try {
-      check(!this.store.stopped(), "USER_STOPPED");
-      check(this.visible(), "FOREGROUND_REQUIRED");
-      this.clock.deadline();
-      if (!this.clock.released()) return;
-      const bounds = this.clock.bounds();
-      this.mark({
-        firstGatePassedAt: this.iso(),
-        gateClockLowerMs: bounds.lower,
-        gateClockUpperMs: bounds.upper,
-        gateClockPhoneOffsetMs: bounds.phoneOffsetMs,
-        gateClockSampleRttMs: bounds.sampleRttMs,
-      });
-      if (this.mono() < this.nextOpeningCheckMono) return;
-      check(this.openRangePath && this.openRangeCategory && this.openingChecks < 2, "OPEN_RANGE_UNCONFIRMED");
-      this.busy = true;
-      this.openingChecks++;
-      this.mark({ openingCheckStartedAt: this.iso() });
-      this.emit("WAITING", "OPEN_RANGE_CHECKING");
-      // Read-only; never send a booking to test readiness. Preserve the existing clock sample.
-      const body = await this.read(this.openRangePath, g, undefined, false);
-      this.ensure(g);
-      const group = category(body?.data);
-      check(
-        group.category_id === this.openRangeCategory.category_id &&
-          group.content_id === this.openRangeCategory.content_id,
-        "OPEN_RANGE_UNCONFIRMED",
-      );
-      const result = openingRange(body?.data?.range, this.task);
-      check(!this.store.stopped() && this.visible(), "FOREGROUND_REQUIRED");
-      this.clock.deadline();
-      check(this.clock.released(), "NOT_RELEASED");
-      if (!result.open) {
-        check(this.openingChecks < 2, "OPEN_RANGE_UNCONFIRMED");
-        this.nextOpeningCheckMono = this.mono() + 1000;
-        this.emit("WAITING", "OPEN_RANGE_NOT_YET");
-        return;
+      this.store.receipt(this.report);
+    } catch {
+      this.report.diagnosticStorageFailed = true;
+    }
+  }
+  limit(until) {
+    this.limitedUntil = Math.max(this.limitedUntil, until);
+    this.report.nextWriteAt = new Date(this.limitedUntil).toISOString();
+    if (this.store) {
+      this.store.data.limitedUntil = Math.max(this.store.data.limitedUntil, until);
+      try {
+        this.store.save();
+      } catch {
+        this.report.diagnosticStorageFailed = true;
       }
-      this.openProofGeneration = g;
-      this.mark({ openConfirmedAt: this.iso(), confirmedMaxDateExclusive: result.maxDateExclusive });
-      this.emit("WAITING", "OPEN_RANGE_CONFIRMED");
-      this.busy = false;
-      await this.submit();
+    }
+  }
+  async read(path, signal) {
+    const { body, status } = await this.io.request(path, {
+      signal,
+      inspectHttpErrors: true,
+      onHeaders: (sample) => {
+        if (sample.status === 429) this.limit(banUntil(sample.retryAfter, this.wall()));
+      },
+    });
+    const reason = bookingResult(body, status);
+    if (reason === "LIMITED") this.limit(banUntil(null, this.wall()));
+    check(!["LIMITED", "AUTH_REQUIRED", "HTTP_404", "HTTP_ERROR"].includes(reason), reason);
+    check(body && (body.CODE === undefined || body.CODE === "ok"), "RESPONSE_UNKNOWN");
+    return body;
+  }
+  async withAccount(signal, action) {
+    const body = await this.read("/User/Center/baseInfo", signal);
+    const uid = String(body?.DATA?.uid ?? "");
+    check(body?.DATA?.is_login === true && /^\d+$/.test(uid), "AUTH_REQUIRED");
+    const name = `hdu-p62:${await accountKey(uid)}`;
+    check(!signal.aborted, "STOPPED");
+    check(this.locks?.request, "LOCK_UNAVAILABLE");
+    await this.locks.request(name, { ifAvailable: true }, async (lock) => {
+      check(lock, "ACTIVE_TAB");
+      check(!signal.aborted, "STOPPED");
+      this.store = this.openStore(name);
+      this.storeName = name;
+      this.store.prune(shanghaiDate(this.wall()));
+      this.saveDisplay();
+      await action(uid);
+    });
+  }
+  pace(at) {
+    const limited = Math.max(this.limitedUntil, this.store.data.limitedUntil);
+    const next = Math.max(limited, this.store.data.nextWrite);
+    if (next > at) {
+      this.report.nextWriteAt = new Date(next).toISOString();
+      throw new TestError(limited > at ? "LIMITED" : "PACING");
+    }
+  }
+  async prepare(task) {
+    if (this.running) return;
+    this.running = true;
+    this.store = null;
+    this.storeName = null;
+    this.message = "";
+    this.controller = new AbortController();
+    this.pageSuspended = !this.visible();
+    const signal = this.controller.signal;
+    this.report = {
+      task,
+      state: "PREPARING",
+      reason: "PREPARING",
+      attempts: 0,
+      verification: "NONE",
+      plannedAt: new Date(task.planned).toISOString(),
+      prepareStartedAt: new Date(this.wall()).toISOString(),
+    };
+    this.emit("PREPARING", "PREPARING");
+    try {
+      validateDailyTask(task);
+      check(task.day === shanghaiDate(this.wall()), "DAY_EXPIRED");
+      await this.withAccount(signal, async (uid) => {
+        const existing = this.store.conflict(task);
+        if (existing) {
+          const fresh = this.report;
+          this.report = restoredReport(existing);
+          if (this.report.state === "SUCCESS" || this.report.verifiedAt) {
+            await this.verify(signal);
+            // A cancelled confirmed booking can be applied for again after a fresh official read.
+            if (this.report.verification !== "ABSENT") return;
+            delete this.store.data.requests[slotKey(this.report.task)];
+            this.store.save();
+            this.report = fresh;
+          } else {
+            this.emit(
+              this.report.accepted ? "ACCEPTED" : "UNKNOWN",
+              this.report.reason === "SENDING" ? "PENDING" : this.report.reason,
+            );
+            return;
+          }
+        }
+        this.pace(Math.max(this.wall(), task.planned));
+        const path = roomQuery(await this.read("/Space/Category/list?LAB_JSON=1", signal));
+        preparationRange((await this.read(path, signal)).data?.range, task);
+        check(!signal.aborted, "STOPPED");
+        this.preparedWall = this.wall();
+        this.preparedMono = this.mono();
+        this.report.preparedAt = new Date(this.preparedWall).toISOString();
+        this.emit("WAITING", "WAITING");
+        await this.wait(signal);
+        check(task.day === shanghaiDate(this.wall()), "DAY_EXPIRED");
+        await this.submit(uid);
+      });
     } catch (error) {
-      if (g === this.generation) await this.stop(codeOf(error));
+      if (this.report.attempts !== 0) {
+        if (!["SUCCESS", "ACCEPTED", "FAILED"].includes(this.report.state)) this.emit("UNKNOWN", "PENDING");
+      } else {
+        const reason = signal.aborted ? "USER_STOPPED" : codeOf(error);
+        this.emit("IDLE", Object.hasOwn(REASONS, reason) ? reason : "LOCAL_ERROR");
+      }
     } finally {
-      this.busy = false;
+      this.waiting = false;
+      this.running = false;
+      this.render();
     }
   }
-  submissionHeaders(sample) {
-    this.mark({
-      firstResponseAt: sample.timing?.responseAt || new Date(sample.receivedWall).toISOString(),
-      dispatchToHeadersMs: sample.timing?.dispatchToHeadersMs,
+  wait(signal) {
+    this.waiting = true;
+    return new Promise((resolve, reject) => {
+      let timer;
+      const finish = (error) => {
+        clearTimeout(timer);
+        this.wake = null;
+        this.waiting = false;
+        signal.removeEventListener("abort", cancel);
+        if (error) reject(error);
+        else resolve();
+      };
+      const cancel = () => finish(new TestError("STOPPED"));
+      this.wake = () => {
+        clearTimeout(timer);
+        if (signal.aborted) return cancel();
+        if (!this.visible() || this.pageSuspended) {
+          this.report.hiddenDuringWait = true;
+          timer = setTimeout(this.wake, 1000);
+          return;
+        }
+        const remaining = this.report.task.planned - this.wall();
+        if (remaining <= 0) finish();
+        else timer = setTimeout(this.wake, nextCheckMs(remaining));
+      };
+      signal.addEventListener("abort", cancel, { once: true });
+      this.wake();
     });
-    this.emit("SUBMITTING", "HTTP_HEADERS", { status: sample.status });
   }
-  submissionBusiness(body, timing) {
-    const reason = responseCode(body),
-      at = timing.businessResultAt || this.iso();
-    this.mark({
-      firstBusinessResultAt: at,
-      firstServerSuccessAt: reason === "SERVER_SUCCESS" ? at : undefined,
-      responseCode: reason,
-      bodyDecodeMs: timing.bodyDecodeMs,
-      dispatchToHeadersMs: timing.dispatchToHeadersMs,
-    });
-    this.emit(["LIMITED", "AUTH_REQUIRED"].includes(reason) ? "FAILED" : "UNKNOWN", reason);
+  observePage(event) {
+    if (!this.running || this.report.attempts !== 0) return;
+    if (event === "freeze" || event === "pagehide") this.pageSuspended = true;
+    if (event === "pageshow" || event === "resume" || (event === "visibilitychange" && this.visible()))
+      this.pageSuspended = false;
+    if (!this.visible() || this.pageSuspended) this.report.hiddenDuringWait = true;
+    this.wake?.();
   }
-  async submit() {
-    check(
-      this.openProofGeneration === this.generation && this.timings.openConfirmedAt,
-      "OPEN_RANGE_UNCONFIRMED",
+  stop() {
+    if (this.running && !this.reviewing && this.report.attempts === 0) this.controller.abort();
+  }
+  async submit(uid) {
+    const r = this.report,
+      task = r.task;
+    this.store.reload(); // Synchronous unresolved check under the already-held account lock.
+    check(!this.store.conflict(task), "PENDING");
+    this.pace(this.wall());
+    const request = signedRequest(
+      task.seatId,
+      uid,
+      task.begin,
+      Math.floor(this.wall() / 1000),
+      task.duration,
     );
-    // Reuse the proven single POST path. Wrap only the optional observation
-    // callback; no second HTTP/signature implementation and no write retries.
-    const original = this.io;
-    this.io = {
-      request: (path, options = {}) =>
-        original.request(
-          path,
-          options.write
-            ? {
-                ...options,
-                onDispatch: (at) => {
-                  check(this.openProofGeneration === this.generation, "OPEN_RANGE_UNCONFIRMED");
-                  options.onDispatch?.(at);
-                  this.mark({ firstDispatchAt: at });
-                  this.persistDiagnostics();
-                },
-              }
-            : options,
-        ),
-    };
+    let undo;
     try {
-      await super.submit();
-    } finally {
-      this.io = original;
+      const response = await this.io.request(BOOK_PATH, {
+        ...request,
+        write: true,
+        inspectHttpErrors: true,
+        beforeDispatch: () => {
+          undo = this.store.intent(task, this.wall());
+        },
+        onDispatched: (at) => {
+          r.attempts = 1;
+          r.dispatchAt = at;
+          r.delayFrom20Ms = Date.parse(at) - task.open;
+          r.scheduleLagMs = Date.parse(at) - task.planned;
+          r.inWindow = r.delayFrom20Ms >= 800 && r.delayFrom20Ms <= 2000;
+          r.clockChangeMs = Math.round(this.wall() - this.preparedWall - (this.mono() - this.preparedMono));
+          r.state = "SENDING";
+          r.reason = "SENDING";
+          this.saveReceipt();
+          this.emit("SENDING", "SENDING");
+        },
+        onHeaders: (sample) => {
+          r.httpStatus = sample.status;
+          r.responseAt = sample.timing.responseAt;
+          r.httpMs = sample.timing.dispatchToHeadersMs;
+          if (sample.status === 429) {
+            this.limit(banUntil(sample.retryAfter, this.wall()));
+            this.emit("FAILED", "LIMITED");
+            this.saveReceipt();
+          }
+        },
+      });
+      r.requestStartAt = response.timing?.requestStartAt;
+      r.businessAt = response.timing?.businessResultAt;
+      r.businessCode = response.body?.CODE == null ? null : String(response.body.CODE);
+      r.businessResult = response.body?.DATA?.result;
+      this.message = String(response.body?.DATA?.msg || response.body?.MESSAGE || "").slice(0, 500);
+      const reason = bookingResult(response.body, response.status);
+      if (reason === "LIMITED") this.limit(banUntil(response.retryAfter, this.wall()));
+      r.accepted = reason === "SERVER_SUCCESS";
+      this.emit(r.accepted ? "ACCEPTED" : unresolved.has(reason) ? "UNKNOWN" : "FAILED", reason);
+      this.saveReceipt();
+      if (r.accepted) await this.verify();
+    } catch (error) {
+      if (r.attempts === 0) {
+        undo?.();
+        throw error;
+      }
+      if (r.reason !== "LIMITED") this.emit("UNKNOWN", codeOf(error));
+      this.saveReceipt();
     }
-    // Successful receipt without a matching record must leave VERIFYING.
-    if (this.state === "VERIFYING") this.emit("UNKNOWN", "RECORD_NOT_VERIFIED");
   }
-  async verify(g) {
-    const historical = this.reviewing && this.task.day < shanghaiDate(this.wall());
-    const grant = await this.store.takeVerification(this.key, this.wall(), historical);
-    if (grant.reason) {
-      this.verificationOutcome = grant.reason;
-      return null;
-    }
-    const start = this.mono();
-    this.verifying = true;
-    let result = null,
-      errorCode = null;
+  async verify(signal) {
+    const r = this.report;
+    r.verification = "CHECKING";
+    this.render();
     try {
-      const body = await this.read(RECORD_PATH, g, undefined, false);
-      check(body?.CODE === undefined || body.CODE === "ok", "RECORDS_UNKNOWN");
+      const body = await this.read(RECORD_PATH, signal);
       const items = records(body);
-      result = verified162(items, this.mapping, this.task);
-      this.verificationOutcome = result
-        ? "VERIFICATION_RECORD_MATCHED"
-        : overlaps(items, this.task).length
-          ? "VERIFICATION_RECORD_CONFLICT"
-          : "VERIFICATION_RECORD_ABSENT";
-      if (result) {
-        this.mark({ firstRecordVerifiedAt: this.iso() });
-        if (this.reviewing) this.verifiedDuringReview = true;
+      const matched = verified162(items, { room: r.task.room }, r.task);
+      r.verification = matched ? "MATCHED" : "ABSENT";
+      r.recordVerified = matched;
+      if (matched) {
+        r.verifiedAt ||= new Date(this.wall()).toISOString();
+        r.state = "SUCCESS";
+      } else if (r.state === "SUCCESS") {
+        r.state = r.accepted ? "ACCEPTED" : "UNKNOWN";
       }
     } catch (error) {
-      errorCode = codeOf(error);
-      this.verificationOutcome = "VERIFICATION_READ_ERROR";
-    } finally {
-      this.timings.verificationMs = this.mono() - start;
-      this.verifying = false;
+      r.verification = ["AUTH_REQUIRED", "LIMITED"].includes(error.code) ? error.code : "ERROR";
     }
-    await this.store.verificationFinished(this.key, grant, this.verificationOutcome, errorCode);
-    if (this.reviewing && g === this.generation && this.verificationOutcome === "VERIFICATION_RECORD_ABSENT")
-      this.absenceProof = grant;
-    return result;
+    this.saveReceipt();
+    this.saveDisplay();
+    this.render();
   }
   async review() {
-    if (this.busy || this.waiting) return this.view();
-    this.reviewing = true;
-    this.verifiedDuringReview = false;
-    this.absenceProof = null;
-    this.verificationOutcome = null;
-    const at = this.iso();
+    if (this.running || !this.report.task || this.report.attempts === 0) return;
+    this.running = this.reviewing = true;
+    this.store = null;
+    this.controller = new AbortController();
+    this.render();
     try {
-      await super.review();
-      if (this.key && this.absenceProof) {
-        this.busy = true;
-        try {
-          const row = await this.store.reconcileNotOpen(this.key, this.iso(), this.absenceProof);
-          if (row?.state === "FAILED") this.emit("FAILED", row.reason);
-        } finally {
-          this.busy = false;
+      const task = this.report.task;
+      await this.withAccount(this.controller.signal, async () => {
+        const saved = this.store.conflict(task);
+        check(saved, "ACCOUNT_CHANGED");
+        this.report = restoredReport(saved);
+        if (this.report.state === "SENDING") {
+          this.report.state = "UNKNOWN";
+          this.report.reason = "PENDING";
         }
-      }
+        await this.verify();
+      });
+    } catch (error) {
+      this.report.verification = ["AUTH_REQUIRED", "LIMITED"].includes(error.code) ? error.code : "ERROR";
+      this.message = REASONS[codeOf(error)] || REASONS.LOCAL_ERROR;
+      this.saveDisplay();
     } finally {
-      this.reviewing = false;
-      this.timings.lastReviewedAt = at;
-      if (this.key)
-        await this.store.note(this.key, { lastReviewedAt: at }, this.logs).catch(() => {
-          this.diagnosticStorageFailed = true;
-        });
-      this.notify(this.view());
-    }
-    return this.view();
-  }
-  recordUI(phase, metrics) {
-    this.mark({ uiFeedback: { [phase]: metrics } });
-    this.persistDiagnostics();
-  }
-  observePage(code) {
-    this.logs.push({ at: this.iso(), category: "PAGE_OBSERVATION", state: this.state, reason: code });
-    if (this.logs.length > 60) this.logs.shift();
-    this.persistDiagnostics();
-  }
-  async diagnosticExport() {
-    await this.diagWrites;
-    let rows = [];
-    if (this.identity) rows = await this.store.list();
-    const stored = rows.find((r) => r.key === this.key);
-    return {
-      version: VERSION,
-      current: publicDiagnostics(
-        stored || {
-          target: this.task,
-          version: VERSION,
-          state: this.state,
-          reason: this.reason,
-          attempts: this.attempted ? 1 : 0,
-          ...this.timings,
-          logs: this.logs,
-        },
-      ),
-      recent: rows
-        .sort((a, b) => b.target.date.localeCompare(a.target.date))
-        .slice(0, 7)
-        .map(publicDiagnostics),
-      diagnosticStorageFailed: !!this.diagnosticStorageFailed,
-    };
-  }
-  async suspend(code = "FOREGROUND_REQUIRED") {
-    try {
-      await this.stop(code);
-    } catch (e) {
-      this.emit(this.attempted ? "UNKNOWN" : "STOPPED", codeOf(e));
+      this.running = this.reviewing = false;
+      this.render();
     }
   }
-  async stop(reason = "USER_STOPPED") {
-    this.generation++;
-    this.waiting = false;
-    this.controller?.abort();
-    let row;
-    try {
-      if (this.formal || this.store.active()) {
-        this.store.stopSignal();
-        row = this.key ? await this.store.stop(this.key, reason) : await this.store.activeTask?.();
-        this.attempted ||= row?.attempts === 1;
-      }
-    } catch {
-      reason = "STORAGE_UNAVAILABLE";
-    }
-    if (row && ["SUCCESS", "FAILED"].includes(row.state)) {
-      this.emit(row.state, row.reason);
-      return;
-    }
-    if (!["SUCCESS", "FAILED"].includes(this.state))
-      this.emit(this.attempted ? "UNKNOWN" : "STOPPED", reason);
+  diagnosticExport() {
+    return publicDiagnostics(this.report);
   }
 }

@@ -1,154 +1,196 @@
-import { check, integer, parseRange, rangeMidnight, shanghaiDate } from "../core.js";
-import { TASK as P53_TASK } from "../p53/policy.js";
+import { check, integer, parseRange, rangeMidnight, responseCode, shanghaiDate } from "../core.js";
+import { TASK } from "../p53/policy.js";
 
-export const VERSION = "6.1.1";
+export const VERSION = "6.2.0";
+export const DEFAULTS = Object.freeze({ startHour: 8, endHour: 22, offsetMs: 1350 });
+export const WRITE_INTERVAL = 10000;
+export const BAN_TIME = 600000;
 
-export function dailyTask(now = Date.now()) {
+export function dailyTask(now = Date.now(), { startHour = 8, endHour = 22, offsetMs = 1350 } = {}) {
   check(Number.isSafeInteger(now), "INVALID_TIME");
-  const day = shanghaiDate(now),
-    midnight = rangeMidnight(day);
-  const date = shanghaiDate(midnight + 2 * 86400000),
-    target = rangeMidnight(date);
+  check(
+    Number.isInteger(startHour) &&
+      Number.isInteger(endHour) &&
+      startHour >= 7 &&
+      endHour <= 22 &&
+      startHour < endHour,
+    "INVALID_TIME",
+  );
+  check(Number.isInteger(offsetMs) && offsetMs >= 800 && offsetMs <= 2000, "INVALID_OFFSET");
+  const day = shanghaiDate(now);
+  const midnight = rangeMidnight(day);
+  const date = shanghaiDate(midnight + 2 * 86400000);
   return Object.freeze({
-    ...P53_TASK,
+    ...TASK,
     day,
     date,
+    startHour,
+    endHour,
+    offsetMs,
     open: midnight + 20 * 3600000,
-    begin: target / 1000 + 8 * 3600,
-    end: target / 1000 + 22 * 3600,
+    planned: midnight + 20 * 3600000 + offsetMs,
+    begin: rangeMidnight(date) / 1000 + startHour * 3600,
+    duration: (endHour - startHour) * 3600,
   });
 }
+
 export function validateDailyTask(task) {
-  const canonical = dailyTask(task.open);
-  for (const key of Object.keys(canonical)) check(task[key] === canonical[key], "TASK_INVALID");
-}
-export function suffix(task) {
-  return `${task.date}:08:00-22:00`;
-}
-export function isP53Slot(task) {
-  return task.begin === P53_TASK.begin && task.duration === P53_TASK.duration;
-}
-export function pending(row) {
-  return row?.attempts === 1 && !["SUCCESS", "FAILED"].includes(row.state);
+  const expected = dailyTask(task.open, task);
+  for (const field of Object.keys(expected)) check(expected[field] === task[field], "TASK_INVALID");
 }
 
-// First excluded date is valid preflight evidence, never an open-date permit.
-export function openingRange(raw, task) {
+export function preparationRange(raw, task) {
   const range = parseRange(raw);
   check(
-    range.min <= 8 && range.max >= 22 && integer(raw.min_duration) <= 14 && integer(raw.max_duration) >= 14,
-    "FOURTEEN_HOURS_NOT_ALLOWED",
+    task.startHour >= range.min &&
+      task.endHour <= range.max &&
+      task.endHour - task.startHour >= integer(raw.min_duration) &&
+      task.endHour - task.startHour <= integer(raw.max_duration),
+    "TIME_NOT_ALLOWED",
   );
-  const open = range.dates.includes(task.date);
-  check(open || range.maxDateExclusive === task.date, "DATE_RULE_MISMATCH");
-  return { open, maxDateExclusive: range.maxDateExclusive };
-}
-export function canReconcileNotOpen(row) {
-  if (row?.state !== "UNKNOWN" || row.reason !== "USER_STOPPED" || row.attempts !== 1) return false;
-  const get = (k) => row[k] ?? row.timings?.[k];
-  const d = Date.parse(get("firstDispatchAt")),
-    b = Date.parse(get("firstBusinessResultAt"));
-  const f = Date.parse(get("uiFeedback")?.FAILED?.stateUpdatedAt);
-  return (
-    get("responseCode") === "NOT_OPEN" &&
-    row.recordVerified === false &&
-    !get("firstServerSuccessAt") &&
-    !get("firstRecordVerifiedAt") &&
-    Number.isFinite(d) &&
-    Number.isFinite(b) &&
-    Number.isFinite(f) &&
-    d <= b &&
-    b <= f
-  );
-}
-export const FIRST_FIELDS = [
-  "prepareStartedAt",
-  "armedAt",
-  "scheduledAt",
-  "firstGatePassedAt",
-  "gateClockLowerMs",
-  "gateClockUpperMs",
-  "gateClockPhoneOffsetMs",
-  "gateClockSampleRttMs",
-  "openingCheckStartedAt",
-  "openConfirmedAt",
-  "confirmedMaxDateExclusive",
-  "firstDispatchAt",
-  "firstResponseAt",
-  "firstBusinessResultAt",
-  "firstServerSuccessAt",
-  "firstRecordVerifiedAt",
-  "responseCode",
-  "loginCheckMs",
-  "catalogReadMs",
-  "idResolutionMs",
-  "conflictReadMs",
-  "preSubmitLocalMs",
-  "dispatchToHeadersMs",
-  "bodyDecodeMs",
-  "totalRequestMs",
-  "verificationMs",
-  "resultStateUpdatedAt",
-];
-export function mergeDiagnostics(old, incoming = {}) {
-  const merged = { ...old };
-  for (const field of FIRST_FIELDS)
-    if (merged[field] == null && incoming[field] != null) merged[field] = incoming[field];
-  if (incoming.lastReviewedAt && (!old.lastReviewedAt || incoming.lastReviewedAt > old.lastReviewedAt))
-    merged.lastReviewedAt = incoming.lastReviewedAt;
-  const feedback = { ...old.uiFeedback };
-  for (const [state, detail] of Object.entries(incoming.uiFeedback || {})) {
-    feedback[state] = { ...detail, ...feedback[state] }; // first measured value wins
-  }
-  merged.uiFeedback = feedback;
-  return merged;
+  // P6's verified +2 rule. Before release the target is the first excluded date.
+  check(range.dates.includes(task.date) || range.maxDateExclusive === task.date, "DATE_RULE_MISMATCH");
+  return range;
 }
 
-// Explicit export allowlist: never serialize a transport response, UID, token,
-// account hash, headers, request body, or arbitrary stored object.
-export function publicDiagnostics(row) {
-  if (!row) return null;
-  const fields = Object.fromEntries(FIRST_FIELDS.map((key) => [key, row[key] ?? row.timings?.[key] ?? null]));
+export function nextCheckMs(remaining) {
+  if (remaining <= 0) return 0;
+  if (remaining <= 1500) return Math.min(remaining, 20);
+  if (remaining <= 5000) return Math.min(remaining - 1500, 100);
+  return Math.min(remaining - 5000, 1000);
+}
+
+export function bookingResult(body, status = 200) {
+  const code = responseCode(body);
+  if (status === 429 || body?.CODE === "LIMITED" || code === "LIMITED") return "LIMITED";
+  if (status === 401 || code === "AUTH_REQUIRED") return "AUTH_REQUIRED";
+  if (status === 404 || code === "HTTP_404") return "HTTP_404";
+  if (status >= 400) return "HTTP_ERROR";
+  if (body?.CODE === "ParamError") {
+    const message = String(body.DATA?.msg || body.MESSAGE || "");
+    if (/未到(?:预约|开放)时间|(?:预约日期|预约时间)(?:尚)?未开放|超出可预约座位时间范围/.test(message))
+      return "NOT_OPEN";
+    if (code === "EXISTING" || code === "SEAT_UNAVAILABLE") return code;
+    return "BUSINESS_REJECTED";
+  }
+  if (code === "RESPONSE_UNKNOWN" && body?.DATA?.result === "fail") return "BUSINESS_REJECTED";
+  return code;
+}
+
+export function banUntil(retryAfter, now) {
+  const seconds = /^\d+$/.test(retryAfter || "") ? Number(retryAfter) : NaN;
+  const until = Number.isFinite(seconds) ? now + seconds * 1000 : Date.parse(retryAfter);
+  return Math.max(now + BAN_TIME, Number.isFinite(until) ? until : 0);
+}
+
+export const STATES = Object.freeze({
+  IDLE: "未启动",
+  PREPARING: "准备中",
+  WAITING: "等待20:00",
+  SENDING: "正在发送",
+  ACCEPTED: "服务器已受理",
+  SUCCESS: "预约成功且记录已核验",
+  FAILED: "预约失败",
+  UNKNOWN: "结果待核实",
+});
+export const REASONS = Object.freeze({
+  IDLE: "未启动",
+  PREPARING: "正在检查登录身份和预约时段",
+  WAITING: "准备完成，等待本地时钟触发",
+  SENDING: "浏览器已接手预约 POST",
+  SERVER_SUCCESS: "服务器返回预约成功",
+  RECORD_VERIFIED: "官方记录已匹配",
+  USER_STOPPED: "已停止待命，可以重新启动",
+  PENDING: "存在未决申请，请核验官方记录",
+  EXISTING: "已有预约或申请时段冲突",
+  NOT_OPEN: "馆方返回未开放",
+  SEAT_UNAVAILABLE: "馆方返回座位不可用或已被占用",
+  LIMITED: "馆方限流，写入已停止",
+  AUTH_REQUIRED: "请在官网重新登录",
+  TIMEOUT: "请求超时，结果待核实",
+  NETWORK_ERROR: "网络异常，结果待核实",
+  HTTP_404: "馆方返回 HTTP 404，请核验官方记录",
+  HTTP_ERROR: "HTTP 响应异常，结果待核实",
+  RESPONSE_UNKNOWN: "业务回执无法确认，结果待核实",
+  BUSINESS_REJECTED: "馆方拒绝本次申请",
+  INVALID_TIME: "请选择 07:00–22:00 内的有效整点时段",
+  INVALID_OFFSET: "首发偏移须为 800–2000 毫秒",
+  TASK_INVALID: "任务参数无效",
+  TIME_NOT_ALLOWED: "所选时段超出馆方当前允许范围",
+  DATE_RULE_MISMATCH: "馆方日期范围与后天规则不符",
+  DATE_CONTRACT_UNKNOWN: "馆方日期范围解析失败",
+  ACTIVE_TAB: "另一标签页正在执行本账号的预约",
+  LOCK_UNAVAILABLE: "浏览器未提供请求互斥功能",
+  INTENT_STORAGE_ERROR: "无法保存未决请求标记，请检查站点存储后重新启动",
+  PACING: "距离上次写请求不足 10 秒，请等待后重新启动",
+  DAY_EXPIRED: "网页恢复时已跨日，本次未发送",
+  LEGACY_ACTIVE: "检测到旧版脚本，请停用后重新打开馆方页面",
+  RECORDS_UNKNOWN: "官方预约列表解析失败",
+  ACCOUNT_CHANGED: "当前登录账号与待核验申请不符",
+  STOPPED: "准备已取消，可重新启动",
+  LOCAL_ERROR: "准备未完成，可修正后重新启动",
+});
+export const VERIFICATIONS = Object.freeze({
+  NONE: "尚未核验",
+  CHECKING: "正在核验",
+  MATCHED: "记录匹配",
+  ABSENT: "尚无匹配记录",
+  ERROR: "读取失败",
+  AUTH_REQUIRED: "需要重新登录",
+  LIMITED: "核验时返回限流",
+});
+
+const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
+const codes = new Set(["ok", "ParamError", "NotFound", "LIMITED", "AUTH_REQUIRED", "0", "1"]);
+
+// This allowlist also applies to restored data. Raw response text never enters exported JSON.
+export function publicDiagnostics(row = {}) {
+  const task = row.task || {};
+  const number = (n) => (Number.isFinite(n) ? n : null);
+  const stamp = (s) => (typeof s === "string" && ISO.test(s) ? s : null);
+  const reason = Object.hasOwn(REASONS, row.reason) ? row.reason : "LOCAL_ERROR";
   return {
-    version: row.version || "6.0.0",
-    taskDay: row.target?.day,
-    date: row.target?.date,
-    seat: "162",
-    room: "宋韵云图（四楼）",
-    begin: "08:00",
-    end: "22:00",
-    duration: 50400,
-    state: row.state,
-    reason: row.reason,
-    attempts: row.attempts ?? 0,
-    verifications: row.verifications ?? 0,
-    lastVerification: row.lastVerification ?? null,
-    historyRecoveryChecks: row.historyRecoveryChecks ?? 0,
-    lastHistoryRecoveryVerification: row.lastHistoryRecoveryVerification ?? null,
-    verificationBlockReason: row.verificationBlockReason ?? null,
-    verificationResult: row.verificationResult ?? null,
-    verificationErrorCode: row.verificationErrorCode ?? null,
+    version: VERSION,
+    room: TASK.room,
+    floorId: TASK.floorId,
+    seat: TASK.seat,
+    seatId: TASK.seatId,
+    date: /^\d{4}-\d\d-\d\d$/.test(task.date) ? task.date : null,
+    startHour: number(task.startHour),
+    endHour: number(task.endHour),
+    offsetMs: number(task.offsetMs),
+    state: Object.hasOwn(STATES, row.state) ? row.state : "IDLE",
+    reason,
+    message: row.recordVerified === true ? REASONS.RECORD_VERIFIED : REASONS[reason],
+    prepareStartedAt: stamp(row.prepareStartedAt),
+    preparedAt: stamp(row.preparedAt),
+    plannedAt: stamp(row.plannedAt),
+    dispatchAt: stamp(row.dispatchAt),
+    responseAt: stamp(row.responseAt),
+    requestStartAt: stamp(row.requestStartAt),
+    businessAt: stamp(row.businessAt),
+    verifiedAt: stamp(row.verifiedAt),
+    delayFrom20Ms: number(row.delayFrom20Ms),
+    scheduleLagMs: number(row.scheduleLagMs),
+    clockChangeMs: number(row.clockChangeMs),
+    httpMs: number(row.httpMs),
+    httpStatus: number(row.httpStatus),
+    businessCode: codes.has(row.businessCode) ? row.businessCode : row.businessCode ? "OTHER" : null,
+    businessResult: ["success", "fail"].includes(row.businessResult) ? row.businessResult : null,
+    accepted: row.accepted === true,
     recordVerified: row.recordVerified === true,
-    ...fields,
-    lastReviewedAt: row.lastReviewedAt || null,
-    reconciledAt: row.reconciledAt || null,
-    uiFeedback: cleanUI(row.uiFeedback),
-    events: (row.logs || [])
-      .slice(-60)
-      .map((e) => ({ at: e.at, category: e.category, state: e.state, code: e.reason })),
-    timingMeaning:
-      "fetch调用/响应头/业务解析/记录核验均为客户端事件；DOM和rAF不是用户实际看到的时刻；不分离网络与服务端耗时",
+    verification: Object.hasOwn(VERIFICATIONS, row.verification) ? row.verification : "NONE",
+    attempts: [0, 1].includes(row.attempts) ? row.attempts : null,
+    inWindow: typeof row.inWindow === "boolean" ? row.inWindow : null,
+    hiddenDuringWait: row.hiddenDuringWait === true,
+    nextWriteAt: stamp(row.nextWriteAt),
+    diagnosticStorageFailed: row.diagnosticStorageFailed === true,
   };
 }
-function cleanUI(feedback = {}) {
-  return Object.fromEntries(
-    Object.entries(feedback).map(([state, value]) => [
-      state,
-      Object.fromEntries(
-        ["stateUpdatedAt", "domUpdatedAt", "domUpdateMs", "renderOpportunityAt", "renderOpportunityDelayMs"]
-          .filter((k) => value[k] !== undefined)
-          .map((k) => [k, value[k]]),
-      ),
-    ]),
-  );
+
+export function restoredReport(raw) {
+  check(raw && typeof raw === "object", "RECORDS_UNKNOWN");
+  const task = dailyTask(Date.parse(`${raw.date}T12:00:00+08:00`) - 2 * 86400000, raw);
+  const clean = publicDiagnostics({ ...raw, task });
+  return { ...clean, task };
 }

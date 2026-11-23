@@ -1,221 +1,141 @@
-import { ORIGIN } from "../core.js";
+import { dailyTask, DEFAULTS, REASONS, STATES, VERIFICATIONS } from "./policy.js";
 
-const PHASES = {
-  IDLE: ["162 · 待启动", "idle"],
-  PREPARING: ["正在检查", "active"],
-  READY_READ_ONLY: ["只读检查通过", "active"],
-  WAITING: ["162 · 待命", "active"],
-  SUBMITTING: ["162 · 提交中", "active"],
-  VERIFYING: ["162 · 正在核对", "active"],
-  SUCCESS: ["162 · 已成功", "success"],
-  FAILED: ["失败 · 手动接管", "failed"],
-  UNKNOWN: ["结果待确认", "unknown"],
-  STOPPED: ["已停止", "stopped"],
-  EXPIRED: ["今日窗口已结束", "stopped"],
-};
-const MANUAL_STATES = ["FAILED", "STOPPED", "EXPIRED"];
-const REASONS = {
-  WAITING_VIEW_ONLY:
-    "这里只查看已保存的待命记录，本页不会恢复提交；若原标签页仍在运行，它可继续。停止任务可停止本浏览器今日任务。",
-  PREPARE_TOO_EARLY: "未到19:58。可先取消勾选做只读检查；到时需再次点击启动，不会自动开始。",
-  READ_ONLY_DEFAULT: "默认只读；每天需重新授权。",
-  REHEARSAL_PASSED: "只读检查通过，没有提交预约。",
-  ARMED_FOR_2000: "已正式待命。保持前台、屏幕唤醒和网络正常。",
-  OPEN_RANGE_CHECKING: "正在核对馆方实际可约日期，尚未提交预约。",
-  OPEN_RANGE_NOT_YET: "馆方尚未列出目标日期，将在安全窗口内至多再核对一次。",
-  OPEN_RANGE_CONFIRMED: "馆方已列出目标日期，准备进行唯一一次正式预约。",
-  OPEN_RANGE_UNCONFIRMED: "未能确认目标日期已开放，本次未提交预约。请查看官网。",
-  HTTP_HEADERS: "HTTP响应已到达，正在解析业务结果。",
-  SERVER_SUCCESS: "162 · 已受理，正在核验",
-  RECORD_VERIFIED: "官方记录已核验：四楼162，08:00—22:00。",
-  REVIEW_SAVED_RESULT: "显示已保存的官方核验结果；首次核验时间保持不变。",
-  SEAT_UNAVAILABLE: "馆方拒绝：座位不可预约。需要核对记录后才能判定最终失败。",
-  NOT_OPEN: "馆方拒绝：日期或时段未开放。不重发。",
-  EXISTING: "已有预约或馆方拒绝重复预约。",
-  LIMITED: "馆方限流或拒绝访问，自动请求已停止。",
-  AUTH_REQUIRED: "登录已失效，请在官网正常认证。本任务不自动恢复。",
-  P52_RECEIPT_REQUIRED: "缺少同浏览器、同账号的P5.2成功凭据。不要清除或伪造旧数据。",
-  P53_SLOT_FROZEN: "P5.3固定时段已冻结，P6不会重新提交该任务。",
-  LEGACY_UNKNOWN: "P5.3仍有未决提交，请核对旧版本与官方记录。禁止通过升级重新预约。",
-  PREVIOUS_UNKNOWN: "还有往日未决提交。请在近期任务中查看结果；不能靠跨日解除保护。",
-  USER_STOPPED: "已停止后续自动写入。停止不等于撤销预约。",
-  FOREGROUND_REQUIRED: "页面离开前台，已停止；不会自动恢复。",
-  RECORD_NOT_VERIFIED: "结果待确认，请检查官方预约。不重新提交。",
-  VERIFICATION_BUDGET_EXHAUSTED: "普通核验额度已用完，请在官方我的预约中确认。",
-  HISTORY_RECOVERY_EXHAUSTED: "本条历史任务的一次补充核验已使用，请在官方我的预约中确认。",
-  VERIFICATION_COOLDOWN: "请间隔至少两秒再核验。",
-  VERIFICATION_READ_ERROR: "官方记录读取失败。原有任务状态继续保留。",
-  VERIFICATION_RECORD_CONFLICT: "官方存在重叠记录，结果仍需人工确认。",
-  VERIFICATION_RECORD_ABSENT: "官方未发现匹配记录，原有任务保护继续保留。",
-  HTTP_404: "预约或查询接口返回404。若已提交，结果待确认；不重发。",
-  TIMEOUT: "请求超时，服务器可能已经处理，请核对官方预约。",
-  NETWORK_ERROR: "网络异常，结果待确认，不重发。",
-  TASK_ALREADY_RESERVED: "已存在该任务，仅恢复查看，不重新启动或提交。",
-  NO_FORMAL_TASK: "尚无本日正式任务。",
-  TODAY_AUTHORIZATION_REQUIRED: "请核对并重新授权当前北京时间日期的任务。",
-  CLOCK_UNVERIFIED: "馆方时间样本无法验证，禁止提交。请检查手机自动校时。",
-  CLOCK_CHANGED_OR_STALE: "校时样本过期或时间发生变化，已停止。",
-  MISSED_WINDOW: "已错过安全执行窗口，不补发。",
-  PREPARE_WINDOW: "正式准备仅限北京时间19:58至20:00前；其他时间可只读检查。",
-};
-export function mountPanel(actions) {
-  const host = document.createElement("div");
-  host.id = "hdu-p60-host";
+const PREFS = "hdu-p62:settings";
+const hour = (n) => `${String(n).padStart(2, "0")}:00`;
+function clock(iso) {
+  if (!iso) return "—";
+  return new Date(Date.parse(iso) + 8 * 3600000).toISOString().slice(11, 23);
+}
+
+export function mountPanel(host, engine, legacy) {
   const root = host.attachShadow({ mode: "open" });
-  root.innerHTML = `<style>
-    :host{all:initial;position:fixed;right:8px;bottom:12px;z-index:2147483647;font:14px/1.45 system-ui,sans-serif;color:#142d3c}
-    *{box-sizing:border-box}[hidden]{display:none!important}button,input,select,textarea{font:inherit}button{min-height:44px;padding:8px 12px;border:1px solid #a5b7c1;border-radius:9px;background:#f8fafc;color:#142d3c;touch-action:manipulation}button:disabled{opacity:.55}
-    #toggle{float:right;max-width:calc(100vw - 16px);background:#174e68;color:white;font-weight:600;font-size:14px}
-    #toggle[data-tone=success]{background:#17633b}#toggle[data-tone=failed]{background:#a0212b}#toggle[data-tone=unknown]{background:#945008}#toggle[data-tone=stopped]{background:#59646b}
-    #panel{clear:both;width:min(344px,calc(100vw - 16px));max-height:68vh;overflow:auto;background:#fff;border:1px solid #a5b7c1;border-radius:12px;padding:12px;margin-bottom:6px;box-shadow:0 3px 16px #0003;overflow-wrap:anywhere}
-    h2{font-size:17px;margin:0 0 6px}p{margin:6px 0}small{display:block;color:#46606e}label{display:flex;gap:8px;margin:10px 0}input{width:22px;height:22px;flex-shrink:0}#actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}#start{grid-column:span 2;background:#174e68;color:white}#state{font-weight:600}summary{padding:10px 0;min-height:44px}select,textarea{width:100%;min-height:44px}textarea{height:170px;white-space:pre-wrap;font:12px/1.4 monospace}a{color:#174e68}#recentLabel{display:block}#logStatus{font-size:12px}
-  </style>
-  <section id="panel" hidden aria-label="P6.1.1 Lite每日预约"><h2>P6.1.1 Lite · 四楼162</h2>
-    <p id="target"></p><small>08:00—22:00 · 14小时 / 50400秒 / 1人</small>
-    <p id="clock"></p><p id="state" role="status" aria-live="polite">未启动</p><small id="reason"></small>
-    <label><input type="checkbox" id="authorize"><span id="authLabel"></span></label>
-    <div id="actions"><button id="start">启动今日抢座</button><button id="stop">停止任务</button><button id="review">查看结果</button></div>
-    <small>未勾选＝只读演练。保持前台和屏幕唤醒；收起面板不会停止任务。</small>
-    <p><a href="${ORIGIN}/#!/Seat/Index/myBookingList" target="_blank" rel="noopener noreferrer">官方我的预约</a><span id="manualWrap" hidden> · <a id="manual" href="${ORIGIN}/#!/Space/Category/list">官网手动选座</a></span></p>
-    <details id="diagnostics"><summary>诊断日志与近期任务</summary>
-      <label id="recentLabel">查看范围<select id="recent"><option value="">今日任务</option></select></label>
-      <button id="copy">复制脱敏日志</button><p id="logStatus"></p><textarea id="logText" readonly hidden aria-label="脱敏JSON日志"></textarea>
-    </details>
-  </section><button id="toggle" aria-expanded="false" data-tone="idle">162 · 待启动</button>`;
+  if (legacy) host.dataset.legacy = "true";
+  root.innerHTML = [
+    "<style>:host{all:initial;position:fixed;right:8px;bottom:max(8px,env(safe-area-inset-bottom));z-index:2147483646;font:14px/1.5 system-ui,sans-serif;color:#233842}",
+    ":host([data-legacy]){top:8px;bottom:auto}*{box-sizing:border-box}details{max-width:calc(100vw - 16px);border:1px solid #a1b9b5;border-radius:10px;background:#f9fdfc;box-shadow:0 2px 12px #183c3b2a}details[open]{width:318px}",
+    "summary{padding:9px 12px;cursor:pointer;color:#155d50;font-weight:650}.body{padding:0 12px 12px;max-height:67vh;overflow:auto;overscroll-behavior:contain}",
+    "label{display:inline-flex;align-items:center;gap:4px}select,input,button,textarea{font:inherit}select,input,button{min-height:38px;color:inherit}input{width:76px}",
+    ".row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:7px 0}button{padding:4px 9px;border:1px solid #9db7b0;border-radius:7px;background:#fff;cursor:pointer}",
+    "#start{background:#155d50;color:#fff;border-color:#155d50}button:disabled{opacity:.5}p{margin:7px 0}.note{font-size:12px;color:#526b6b}",
+    "output{display:block;overflow-wrap:anywhere;white-space:pre-wrap;font-size:12px}textarea{width:100%;height:110px}</style>",
+    '<details><summary>P6.2 · 162 · <span id="state" role="status"></span></summary><div class="body">',
+    '<p>宋韵云图（四楼）162号</p><p id="target"></p>',
+    '<div class="row"><label>开始 <select id="startHour"></select></label><label>结束 <select id="endHour"></select></label></div>',
+    '<label>20:00 后 <input id="offset" type="number" min="800" max="2000" step="1" value="1350"> 毫秒</label>',
+    '<p class="note">请保持 Firefox 前台和屏幕常亮，开启系统自动校时。</p>',
+    '<div class="row"><button id="start">启动正式预约</button><button id="stop">停止待命</button></div>',
+    '<output id="reason" aria-live="polite"></output><output id="metrics"></output>',
+    '<div class="row"><button id="review">核验官方记录</button><button id="copy">复制诊断日志</button></div>',
+    '<span id="copyStatus" role="status"></span><textarea id="log" aria-label="脱敏诊断日志" readonly hidden></textarea>',
+    "</div></details>",
+  ].join("");
   const el = (id) => root.getElementById(id);
-  let view,
-    engine,
-    displaySignature = "",
-    authDay = "",
-    frameRevision = 0,
-    destroyed = false;
-  const attach = () => {
-    if (!destroyed && location.origin === ORIGIN && !host.isConnected) document.documentElement?.append(host);
-  };
-  attach();
-  // Restore only this existing host and closure. Never initialize an engine or
-  // call prepare from a MutationObserver. No errors are inferred from page text.
-  const observer = new MutationObserver(() => {
-    if (host.isConnected || destroyed || location.origin !== ORIGIN) return;
-    attach();
-    actions.observe("UI_REATTACHED");
-  });
-  observer.observe(document, { childList: true, subtree: true });
-  const trusted = (fn) => (event) => {
-    if (event.isTrusted) void fn();
-  };
-  el("toggle").onclick = trusted(() => {
-    el("panel").hidden = !el("panel").hidden;
-    el("toggle").setAttribute("aria-expanded", String(!el("panel").hidden));
-  });
-  el("start").onclick = trusted(() => actions.start(el("authorize").checked, authDay));
-  el("stop").onclick = trusted(() => actions.stop());
-  el("review").onclick = trusted(() => actions.review(el("recent").value));
-  el("manual").onclick = (event) => {
-    if (!MANUAL_STATES.includes(view?.state)) {
-      event.preventDefault();
-      el("reason").textContent = "仅在明确失败后人工选座；结果未知时请先检查官方预约。";
-    } else {
-      el("panel").hidden = true;
-      el("toggle").setAttribute("aria-expanded", "false");
+  for (let n = 7; n <= 22; n++) {
+    if (n < 22) el("startHour").add(new Option(hour(n), n));
+    if (n > 7) el("endHour").add(new Option(hour(n), n));
+  }
+  let settings = DEFAULTS;
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS));
+    if (saved && [saved.startHour, saved.endHour, saved.offsetMs].every(Number.isInteger)) {
+      dailyTask(Date.now(), saved);
+      settings = saved;
     }
-  };
-  const showLogs = async (copy) => {
+  } catch {
+    /* Settings are optional. */
+  }
+  el("startHour").value = settings.startHour;
+  el("endHour").value = settings.endHour;
+  el("offset").value = settings.offsetMs;
+  let shownDay;
+  function selection() {
+    return dailyTask(Date.now(), {
+      startHour: +el("startHour").value,
+      endHour: +el("endHour").value,
+      offsetMs: +el("offset").value,
+    });
+  }
+  function preview() {
     try {
-      const value = JSON.stringify(await actions.export(), null, 2);
-      el("logText").value = value;
-      if (copy && navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(value);
-          el("logStatus").textContent = "脱敏日志已复制";
-          return;
-        } catch {
-          /* Native selectable text fallback, no permissions required. */
-        }
-      }
-      el("logText").hidden = false;
-      el("logText").focus();
-      el("logText").select();
-      el("logStatus").textContent = "请长按日志文本，全选并复制。";
+      const task = selection();
+      shownDay = task.day;
+      el("target").textContent = `预约 ${task.date}　${hour(task.startHour)}–${hour(task.endHour)}`;
+      el("start").disabled = engine.running || legacy;
+      return task;
+    } catch (error) {
+      el("target").textContent = REASONS[error.code] || REASONS.INVALID_TIME;
+      el("start").disabled = true;
+    }
+  }
+  function render(view) {
+    el("state").textContent = legacy ? "检测到旧版" : STATES[view.state];
+    el("reason").textContent =
+      (legacy
+        ? REASONS.LEGACY_ACTIVE
+        : view.recordVerified
+          ? REASONS.RECORD_VERIFIED
+          : REASONS[view.reason]) +
+      (view.message ? `\n${view.message}` : "") +
+      (view.inWindow === false ? "\n已超出准点窗口。页面暂停或主线程延迟可能推迟请求。" : "");
+    el("metrics").textContent = view.date
+      ? [
+          `本次 ${view.date}　${hour(view.startHour)}–${hour(view.endHour)}`,
+          `计划 ${clock(view.plannedAt)}　发出 ${clock(view.dispatchAt)}`,
+          `相对20:00 ${view.delayFrom20Ms ?? "—"} ms　发送 ${view.attempts ?? "未知"} 次`,
+          `HTTP ${view.httpStatus ?? "—"}　${view.httpMs == null ? "—" : `${Math.round(view.httpMs)} ms`}`,
+          `响应 ${clock(view.responseAt)}　业务码 ${view.businessCode ?? "—"}`,
+          `服务器受理 ${view.accepted ? "是" : "未确认"}　${view.reason}`,
+          `官方记录 ${VERIFICATIONS[view.verification]}`,
+          view.nextWriteAt ? `最早再次申请 ${clock(view.nextWriteAt)}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+    for (const id of ["startHour", "endHour", "offset"]) el(id).disabled = view.running;
+    el("start").disabled = view.running || legacy || !shownDay;
+    el("stop").disabled = !view.running || view.reviewing || view.attempts !== 0;
+    el("review").disabled = view.running || !["UNKNOWN", "ACCEPTED", "SUCCESS"].includes(view.state);
+  }
+  for (const id of ["startHour", "endHour", "offset"]) el(id).oninput = preview;
+  root.querySelector("details").ontoggle = () => {
+    if (!engine.running) preview();
+  };
+  el("start").onclick = () => {
+    const previousDay = shownDay;
+    const task = preview();
+    if (!task || engine.running || legacy) return;
+    if (previousDay !== shownDay) {
+      el("target").append("　日期已更新，请核对后启动。");
+      return;
+    }
+    try {
+      localStorage.setItem(
+        PREFS,
+        JSON.stringify({ startHour: task.startHour, endHour: task.endHour, offsetMs: task.offsetMs }),
+      );
     } catch {
-      el("logStatus").textContent = "日志读取失败；不影响已保存的提交保护。";
+      /* Settings are optional. */
+    }
+    el("copyStatus").textContent = "";
+    el("log").hidden = true;
+    void engine.prepare(task);
+  };
+  el("stop").onclick = () => engine.stop();
+  el("review").onclick = () => void engine.review();
+  el("copy").onclick = async () => {
+    const text = JSON.stringify(engine.diagnosticExport(), null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+      el("copyStatus").textContent = "已复制";
+      el("log").hidden = true;
+    } catch {
+      el("log").hidden = false;
+      el("log").value = text;
+      el("log").focus();
+      el("log").select();
+      el("copyStatus").textContent = "可长按复制所选日志";
     }
   };
-  el("copy").onclick = trusted(() => showLogs(true));
-  el("diagnostics").ontoggle = () => {
-    if (el("diagnostics").open) void actions.recent();
-  };
-  return {
-    root,
-    host,
-    newDay(task) {
-      authDay = task.day;
-      el("authorize").checked = false;
-      el("authorize").disabled = false;
-      el("recent").replaceChildren(new Option("今日任务", ""));
-      el("authLabel").textContent = `我确认馆方规则及上述方案，授权 ${task.day} 今日最多一次提交。`;
-    },
-    recent(rows) {
-      const previous = el("recent").value;
-      el("recent").replaceChildren(
-        new Option("今日任务", ""),
-        ...rows.map((r) => new Option(`${r.target.date} · ${r.state}`, r.target.day)),
-      );
-      if ([...el("recent").options].some((o) => o.value === previous)) el("recent").value = previous;
-    },
-    render(next, source) {
-      view = next;
-      engine = source;
-      const historical = next.task.day !== authDay;
-      el("authorize").disabled = historical || next.formal || next.state === "PREPARING";
-      el("start").disabled = historical || next.formal || next.state === "PREPARING";
-      if (historical) el("authorize").checked = false;
-      el("target").textContent =
-        `${next.task.day === authDay ? "今日" : "历史只读"}任务 ${next.task.day} → 预约 ${next.task.date}`;
-      const phase = next.reason === "SERVER_SUCCESS" && next.state === "VERIFYING" ? "ACCEPTED" : next.state;
-      const signature = `${next.task.day}:${phase}:${next.reason}`;
-      if (signature === displaySignature) return;
-      displaySignature = signature;
-      const started = performance.now(),
-        stateUpdatedAt = new Date().toISOString();
-      const [label, tone] = PHASES[next.state] || PHASES.UNKNOWN;
-      const text =
-        next.reason === "WAITING_VIEW_ONLY"
-          ? "待命记录 · 仅查看"
-          : phase === "ACCEPTED"
-            ? "162 · 已受理，正在核验"
-            : label;
-      el("toggle").textContent = next.task.day === authDay ? text : `${next.task.date.slice(5)} · ${label}`;
-      el("toggle").dataset.tone = tone;
-      el("state").textContent = text;
-      el("reason").textContent = REASONS[next.reason] || `状态代码：${next.reason}。不会重发预约。`;
-      el("manualWrap").hidden = !MANUAL_STATES.includes(next.state);
-      const domEnd = performance.now(),
-        domUpdatedAt = new Date().toISOString();
-      source.recordUI(phase, { stateUpdatedAt, domUpdatedAt, domUpdateMs: domEnd - started });
-      const revision = ++frameRevision;
-      requestAnimationFrame(() => {
-        if (revision !== frameRevision || engine !== source || document.visibilityState !== "visible") return;
-        source.recordUI(phase, {
-          renderOpportunityAt: new Date().toISOString(),
-          renderOpportunityDelayMs: performance.now() - domEnd,
-        });
-      });
-    },
-    clock(task, now) {
-      const remaining = Math.max(0, Math.ceil((task.open - now) / 1000));
-      const countdown = `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
-      const text = `北京时间20:00 · ${remaining ? `剩余 ${countdown}` : "已到开放时点"}`;
-      if (el("clock").textContent !== text) el("clock").textContent = text;
-      if (remaining > 0 && view?.state === "WAITING" && view.task.day === authDay) {
-        const label = `162 · ${countdown}`;
-        if (el("toggle").textContent !== label) el("toggle").textContent = label;
-      }
-    },
-    destroy() {
-      destroyed = true;
-      observer.disconnect();
-      host.remove();
-    },
-  };
+  preview();
+  return { render };
 }
