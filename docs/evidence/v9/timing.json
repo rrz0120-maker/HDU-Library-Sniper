@@ -1,0 +1,730 @@
+{
+  "runAtUtc": "2026-11-23T00:14:47.061955+00:00",
+  "bundleSha256": "8dd8bc200d00cbf2b0834c6830a124e0341f289212a5518d2740178dfd7c430b",
+  "plannedOffsetMs": 1200,
+  "windowMs": [
+    800,
+    2000
+  ],
+  "realLibraryWrites": 0,
+  "engines": {
+    "chromium": {
+      "version": "156.0.8078.79",
+      "loads": {
+        "foreground": {
+          "samples": [
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1220,
+              "loopbackReceiveMs": 1223.9,
+              "httpMs": 24.5,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1214,
+              "loopbackReceiveMs": 1215.1,
+              "httpMs": 15.8,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1205,
+              "browserRequestStartMs": 1216,
+              "loopbackReceiveMs": 1216.1,
+              "httpMs": 17.8,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1209,
+              "browserRequestStartMs": 1222,
+              "loopbackReceiveMs": 1224.8,
+              "httpMs": 22.3,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1217,
+              "loopbackReceiveMs": 1217.1,
+              "httpMs": 19.5,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1210,
+              "loopbackReceiveMs": 1211.2,
+              "httpMs": 10.3,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1220,
+              "loopbackReceiveMs": 1220.7,
+              "httpMs": 22.3,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1221,
+              "loopbackReceiveMs": 1223.4,
+              "httpMs": 24.5,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1201,
+              "browserRequestStartMs": 1208,
+              "loopbackReceiveMs": 1209.5,
+              "httpMs": 9.3,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1209,
+              "loopbackReceiveMs": 1210.0,
+              "httpMs": 9.5,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1203,
+              "browserRequestStartMs": 1224,
+              "loopbackReceiveMs": 1226.2,
+              "httpMs": 26.8,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1212,
+              "loopbackReceiveMs": 1212.7,
+              "httpMs": 12.7,
+              "blockStartMs": null,
+              "blockEndMs": null
+            }
+          ],
+          "dispatch": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1201,
+            "median": 1202.0,
+            "p95": 1209,
+            "max": 1209
+          },
+          "receiver": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1209.5,
+            "median": 1216.6,
+            "p95": 1226.2,
+            "max": 1226.2
+          }
+        },
+        "blocked_450ms": {
+          "samples": [
+            {
+              "dispatchMs": 1453,
+              "browserRequestStartMs": 1461,
+              "loopbackReceiveMs": 1464.4,
+              "httpMs": 13.8,
+              "blockStartMs": 1001,
+              "blockEndMs": 1451
+            },
+            {
+              "dispatchMs": 1461,
+              "browserRequestStartMs": 1472,
+              "loopbackReceiveMs": 1472.5,
+              "httpMs": 19.4,
+              "blockStartMs": 1001,
+              "blockEndMs": 1452
+            },
+            {
+              "dispatchMs": 1453,
+              "browserRequestStartMs": 1469,
+              "loopbackReceiveMs": 1473.5,
+              "httpMs": 21.5,
+              "blockStartMs": 1001,
+              "blockEndMs": 1451
+            },
+            {
+              "dispatchMs": 1452,
+              "browserRequestStartMs": 1463,
+              "loopbackReceiveMs": 1463.8,
+              "httpMs": 15.8,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1455,
+              "browserRequestStartMs": 1471,
+              "loopbackReceiveMs": 1472.6,
+              "httpMs": 18.6,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1466,
+              "browserRequestStartMs": 1499,
+              "loopbackReceiveMs": 1500.2,
+              "httpMs": 41.3,
+              "blockStartMs": 1001,
+              "blockEndMs": 1454
+            },
+            {
+              "dispatchMs": 1452,
+              "browserRequestStartMs": 1463,
+              "loopbackReceiveMs": 1464.6,
+              "httpMs": 13.1,
+              "blockStartMs": 1001,
+              "blockEndMs": 1451
+            },
+            {
+              "dispatchMs": 1452,
+              "browserRequestStartMs": 1464,
+              "loopbackReceiveMs": 1464.0,
+              "httpMs": 14.7,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1452,
+              "browserRequestStartMs": 1460,
+              "loopbackReceiveMs": 1462.2,
+              "httpMs": 13.2,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1452,
+              "browserRequestStartMs": 1463,
+              "loopbackReceiveMs": 1464.3,
+              "httpMs": 13.4,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1453,
+              "browserRequestStartMs": 1466,
+              "loopbackReceiveMs": 1466.9,
+              "httpMs": 17.6,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1454,
+              "browserRequestStartMs": 1460,
+              "loopbackReceiveMs": 1460.4,
+              "httpMs": 11.3,
+              "blockStartMs": 1000,
+              "blockEndMs": 1452
+            }
+          ],
+          "dispatch": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1452,
+            "median": 1453.0,
+            "p95": 1466,
+            "max": 1466
+          },
+          "receiver": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1460.4,
+            "median": 1464.5,
+            "p95": 1500.2,
+            "max": 1500.2
+          }
+        },
+        "blocked_1300ms": {
+          "samples": [
+            {
+              "dispatchMs": 2304,
+              "browserRequestStartMs": 2321,
+              "loopbackReceiveMs": 2322.1,
+              "httpMs": 22.4,
+              "blockStartMs": 1001,
+              "blockEndMs": 2301
+            },
+            {
+              "dispatchMs": 2311,
+              "browserRequestStartMs": 2345,
+              "loopbackReceiveMs": 2346.5,
+              "httpMs": 40.6,
+              "blockStartMs": 1001,
+              "blockEndMs": 2301
+            },
+            {
+              "dispatchMs": 2310,
+              "browserRequestStartMs": 2319,
+              "loopbackReceiveMs": 2319.3,
+              "httpMs": 11.5,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2308,
+              "browserRequestStartMs": 2323,
+              "loopbackReceiveMs": 2325.4,
+              "httpMs": 22,
+              "blockStartMs": 1000,
+              "blockEndMs": 2301
+            },
+            {
+              "dispatchMs": 2302,
+              "browserRequestStartMs": 2318,
+              "loopbackReceiveMs": 2319.5,
+              "httpMs": 24.7,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2303,
+              "browserRequestStartMs": 2330,
+              "loopbackReceiveMs": 2333.3,
+              "httpMs": 31.3,
+              "blockStartMs": 1000,
+              "blockEndMs": 2301
+            },
+            {
+              "dispatchMs": 2302,
+              "browserRequestStartMs": 2324,
+              "loopbackReceiveMs": 2326.5,
+              "httpMs": 25.7,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2306,
+              "browserRequestStartMs": 2315,
+              "loopbackReceiveMs": 2317.8,
+              "httpMs": 14.5,
+              "blockStartMs": 1002,
+              "blockEndMs": 2302
+            },
+            {
+              "dispatchMs": 2305,
+              "browserRequestStartMs": 2333,
+              "loopbackReceiveMs": 2335.1,
+              "httpMs": 33.5,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2303,
+              "browserRequestStartMs": 2318,
+              "loopbackReceiveMs": 2318.8,
+              "httpMs": 18.5,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2304,
+              "browserRequestStartMs": 2321,
+              "loopbackReceiveMs": 2322.4,
+              "httpMs": 20.4,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2311,
+              "browserRequestStartMs": 2332,
+              "loopbackReceiveMs": 2336.6,
+              "httpMs": 31.7,
+              "blockStartMs": 1001,
+              "blockEndMs": 2301
+            }
+          ],
+          "dispatch": {
+            "hits": 0,
+            "n": 12,
+            "percent": 0.0,
+            "min": 2302,
+            "median": 2304.5,
+            "p95": 2311,
+            "max": 2311
+          },
+          "receiver": {
+            "hits": 0,
+            "n": 12,
+            "percent": 0.0,
+            "min": 2317.8,
+            "median": 2323.9,
+            "p95": 2346.5,
+            "max": 2346.5
+          }
+        }
+      }
+    },
+    "webkit": {
+      "version": "26.5",
+      "loads": {
+        "foreground": {
+          "samples": [
+            {
+              "dispatchMs": 1203,
+              "browserRequestStartMs": 1212,
+              "loopbackReceiveMs": 1213.8,
+              "httpMs": 14,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1205,
+              "browserRequestStartMs": 1212,
+              "loopbackReceiveMs": 1214.0,
+              "httpMs": 13,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1206,
+              "browserRequestStartMs": 1214,
+              "loopbackReceiveMs": 1214.6,
+              "httpMs": 16,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1209,
+              "loopbackReceiveMs": 1210.1,
+              "httpMs": 12,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1203,
+              "browserRequestStartMs": 1208,
+              "loopbackReceiveMs": 1209.0,
+              "httpMs": 7,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1208,
+              "loopbackReceiveMs": 1208.8,
+              "httpMs": 11,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1203,
+              "browserRequestStartMs": 1208,
+              "loopbackReceiveMs": 1209.0,
+              "httpMs": 7,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1206,
+              "browserRequestStartMs": 1212,
+              "loopbackReceiveMs": 1213.0,
+              "httpMs": 13,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1204,
+              "browserRequestStartMs": 1209,
+              "loopbackReceiveMs": 1210.8,
+              "httpMs": 11,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1203,
+              "browserRequestStartMs": 1206,
+              "loopbackReceiveMs": 1207.3,
+              "httpMs": 10,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1202,
+              "browserRequestStartMs": 1209,
+              "loopbackReceiveMs": 1210.5,
+              "httpMs": 13,
+              "blockStartMs": null,
+              "blockEndMs": null
+            },
+            {
+              "dispatchMs": 1203,
+              "browserRequestStartMs": 1209,
+              "loopbackReceiveMs": 1212.7,
+              "httpMs": 11,
+              "blockStartMs": null,
+              "blockEndMs": null
+            }
+          ],
+          "dispatch": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1202,
+            "median": 1203.0,
+            "p95": 1206,
+            "max": 1206
+          },
+          "receiver": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1207.3,
+            "median": 1210.65,
+            "p95": 1214.6,
+            "max": 1214.6
+          }
+        },
+        "blocked_450ms": {
+          "samples": [
+            {
+              "dispatchMs": 1453,
+              "browserRequestStartMs": 1461,
+              "loopbackReceiveMs": 1462.5,
+              "httpMs": 19,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1451,
+              "browserRequestStartMs": 1456,
+              "loopbackReceiveMs": 1459.9,
+              "httpMs": 9,
+              "blockStartMs": 1000,
+              "blockEndMs": 1449
+            },
+            {
+              "dispatchMs": 1456,
+              "browserRequestStartMs": 1468,
+              "loopbackReceiveMs": 1469.2,
+              "httpMs": 16,
+              "blockStartMs": 1001,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1455,
+              "browserRequestStartMs": 1460,
+              "loopbackReceiveMs": 1461.4,
+              "httpMs": 10,
+              "blockStartMs": 1000,
+              "blockEndMs": 1451
+            },
+            {
+              "dispatchMs": 1453,
+              "browserRequestStartMs": 1462,
+              "loopbackReceiveMs": 1462.7,
+              "httpMs": 14,
+              "blockStartMs": 1000,
+              "blockEndMs": 1451
+            },
+            {
+              "dispatchMs": 1455,
+              "browserRequestStartMs": 1464,
+              "loopbackReceiveMs": 1466.0,
+              "httpMs": 16,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1458,
+              "browserRequestStartMs": 1471,
+              "loopbackReceiveMs": 1471.0,
+              "httpMs": 21,
+              "blockStartMs": 1001,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1457,
+              "browserRequestStartMs": 1462,
+              "loopbackReceiveMs": 1462.9,
+              "httpMs": 11,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1452,
+              "browserRequestStartMs": 1458,
+              "loopbackReceiveMs": 1459.1,
+              "httpMs": 11,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1453,
+              "browserRequestStartMs": 1457,
+              "loopbackReceiveMs": 1457.5,
+              "httpMs": 7,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1453,
+              "browserRequestStartMs": 1459,
+              "loopbackReceiveMs": 1459.5,
+              "httpMs": 9,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            },
+            {
+              "dispatchMs": 1452,
+              "browserRequestStartMs": 1457,
+              "loopbackReceiveMs": 1457.4,
+              "httpMs": 7,
+              "blockStartMs": 1000,
+              "blockEndMs": 1450
+            }
+          ],
+          "dispatch": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1451,
+            "median": 1453.0,
+            "p95": 1458,
+            "max": 1458
+          },
+          "receiver": {
+            "hits": 12,
+            "n": 12,
+            "percent": 100.0,
+            "min": 1457.4,
+            "median": 1461.95,
+            "p95": 1471.0,
+            "max": 1471.0
+          }
+        },
+        "blocked_1300ms": {
+          "samples": [
+            {
+              "dispatchMs": 2303,
+              "browserRequestStartMs": 2308,
+              "loopbackReceiveMs": 2308.6,
+              "httpMs": 8,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2303,
+              "browserRequestStartMs": 2308,
+              "loopbackReceiveMs": 2309.6,
+              "httpMs": 10,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2304,
+              "browserRequestStartMs": 2311,
+              "loopbackReceiveMs": 2311.5,
+              "httpMs": 8,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2304,
+              "browserRequestStartMs": 2311,
+              "loopbackReceiveMs": 2312.2,
+              "httpMs": 12,
+              "blockStartMs": 1001,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2307,
+              "browserRequestStartMs": 2310,
+              "loopbackReceiveMs": 2311.3,
+              "httpMs": 13,
+              "blockStartMs": 1001,
+              "blockEndMs": 2301
+            },
+            {
+              "dispatchMs": 2303,
+              "browserRequestStartMs": 2310,
+              "loopbackReceiveMs": 2310.9,
+              "httpMs": 10,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2303,
+              "browserRequestStartMs": 2308,
+              "loopbackReceiveMs": 2308.8,
+              "httpMs": 8,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2307,
+              "browserRequestStartMs": 2311,
+              "loopbackReceiveMs": 2311.7,
+              "httpMs": 12,
+              "blockStartMs": 1000,
+              "blockEndMs": 2299
+            },
+            {
+              "dispatchMs": 2304,
+              "browserRequestStartMs": 2310,
+              "loopbackReceiveMs": 2311.8,
+              "httpMs": 9,
+              "blockStartMs": 1001,
+              "blockEndMs": 2301
+            },
+            {
+              "dispatchMs": 2305,
+              "browserRequestStartMs": 2313,
+              "loopbackReceiveMs": 2313.6,
+              "httpMs": 19,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2303,
+              "browserRequestStartMs": 2307,
+              "loopbackReceiveMs": 2307.4,
+              "httpMs": 9,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            },
+            {
+              "dispatchMs": 2304,
+              "browserRequestStartMs": 2308,
+              "loopbackReceiveMs": 2308.1,
+              "httpMs": 6,
+              "blockStartMs": 1000,
+              "blockEndMs": 2300
+            }
+          ],
+          "dispatch": {
+            "hits": 0,
+            "n": 12,
+            "percent": 0.0,
+            "min": 2303,
+            "median": 2304.0,
+            "p95": 2307,
+            "max": 2307
+          },
+          "receiver": {
+            "hits": 0,
+            "n": 12,
+            "percent": 0.0,
+            "min": 2307.4,
+            "median": 2311.1000000000004,
+            "p95": 2313.6,
+            "max": 2313.6
+          }
+        }
+      }
+    }
+  }
+}

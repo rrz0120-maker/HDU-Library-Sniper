@@ -4,6 +4,9 @@
 
 <h1 align="center">HDU Library Sniper</h1>
 
+**iPad V9 Lite** 使用 Safari 与 Userscripts，可预约四楼 162 号。默认在北京时间 20:00:01.200 发出首次请求。[安装与使用](docs/IPAD-V9-LITE.md) · [模拟性能报告](docs/IPAD-V9-TESTS.md)
+
+
 <p align="center">
   杭州电子科技大学图书馆预约与自动签到工具。选好座位和时间，保存并启用方案，剩下的交给后台。
 </p>
