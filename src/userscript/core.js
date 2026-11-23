@@ -237,6 +237,10 @@ export function md5(source) {
 }
 export function signedRequest(seatId, uid, begin, apiTime, duration = 3600) {
   check(duration === 3600 || duration === 50400, "INVALID_DURATION");
+  return bookSeatRequest(seatId, uid, begin, apiTime, duration);
+}
+// Callers validate their own slot policy. Keep the wire contract shared.
+export function bookSeatRequest(seatId, uid, begin, apiTime, duration) {
   const source = `post&${BOOK_PATH}&api_time${apiTime}&beginTime${begin}&duration${duration}&is_recommend0&seatBookers[0]${uid}&seats[0]${seatId}`;
   return {
     token: btoa(md5(source)),
