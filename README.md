@@ -4,6 +4,9 @@
 
 <h1 align="center">HDU Library Sniper</h1>
 
+**Android P6.2 Lite** 用于 Firefox + Tampermonkey，默认北京时间 20:00:01.350 预约四楼 162 号后天 08:00–22:00。[下载 ZIP](userscripts/HDU_Android_P6.2_Lite.zip) · [安装说明](docs/P62-ANDROID-LITE.md) · [模拟验收报告](docs/P62-VALIDATION.md)
+
+
 <p align="center">
   杭州电子科技大学图书馆预约与自动签到工具。选好座位和时间，保存并启用方案，剩下的交给后台。
 </p>

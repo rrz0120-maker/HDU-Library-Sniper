@@ -1,0 +1,64 @@
+{
+  "bundleSha256": "d3c45c288cde873f38a54d67aa73ccb18aaee130d46ef1c946b541424fb05b90",
+  "sourceCommit": "aebd7f49f3a99b515f9595e7a22a561a51e5c268",
+  "nodeTests": 97,
+  "nodePassed": 97,
+  "upstreamSignatureVectors": 123,
+  "upstreamSignatureMatches": 123,
+  "upstreamCommit": "f1055c9713c7b5917c4ef4d6d1c959864e41f05c",
+  "mobileCommits": [
+    "d144d479c6daeef61314ffe6e72beaf436560291",
+    "4313031b6c5059003314de482207ba539e1b06ca"
+  ],
+  "realLibraryWrites": 0,
+  "androidDeviceAcceptance": "PENDING",
+  "timingSamples": 72,
+  "timingReport": "timing.json",
+  "browserGroups": {
+    "chromium": {
+      "passed": 17,
+      "groups": [
+        "direct_success",
+        "exact_boundary",
+        "custom_hours_and_preflight",
+        "replies",
+        "visibility_and_restart",
+        "suspended_late",
+        "refresh_after_send",
+        "uncertain",
+        "timeout",
+        "two_tabs",
+        "verification",
+        "optional_diagnostics",
+        "synchronous_failure",
+        "old_scripts",
+        "layout",
+        "crash_intent",
+        "cancelled_record"
+      ]
+    },
+    "firefox": {
+      "passed": 17,
+      "groups": [
+        "direct_success",
+        "exact_boundary",
+        "custom_hours_and_preflight",
+        "replies",
+        "visibility_and_restart",
+        "suspended_late",
+        "refresh_after_send",
+        "uncertain",
+        "timeout",
+        "two_tabs",
+        "verification",
+        "optional_diagnostics",
+        "synchronous_failure",
+        "old_scripts",
+        "layout",
+        "crash_intent",
+        "cancelled_record"
+      ]
+    }
+  },
+  "zipSha256": "81a4b31897c61f82a327734be2dfce6c3874f5caf1643a52bf7f1c5af1b1f1a0"
+}
