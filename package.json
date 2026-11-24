@@ -41,6 +41,7 @@
     "build:userscript:p61": "node scripts/build-userscript-p61.mjs",
     "test:userscript:p61": "node --test tests/userscript-p60/*.test.mjs",
     "test:userscript:p61:browser": "playwright test --config playwright.p60.config.ts",
+    "build:userscript:v10": "node scripts/build-userscript-v10.mjs && python3 scripts/package-ipad-v10.py",
     "build:userscript:v9": "node scripts/build-userscript-v9.mjs",
     "test:userscript:v9": "node --test tests/userscript-v9/*.test.mjs",
     "test:userscript:v9:browser": "python3 tests/userscript-v9/browser.py"

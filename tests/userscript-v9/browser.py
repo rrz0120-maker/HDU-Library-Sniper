@@ -308,7 +308,8 @@ def preflight_and_storage(browser, mock):
           Storage.prototype.setItem = function(k,v) { if(this === sessionStorage) throw Error(); return set.call(this,k,v); };
         }""")
         start(p)
-        expect(field(p, "#status")).to_have_text("预约成功且记录已核验")
+        label = "预约成功且记录已核验"
+        expect(field(p, "#status")).to_have_text(label if HOST == "#hdu-ipad-v9-lite" else "上次 · " + label)
         assert exported(p)["sends"] == 1 and len(f.posts) == 1
         p.evaluate("() => { navigator.clipboard.writeText = async () => {throw Error()}; }")
         field(p, "#copy").click()
