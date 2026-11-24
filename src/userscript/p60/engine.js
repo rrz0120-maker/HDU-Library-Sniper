@@ -1,3 +1,4 @@
+import { archive } from "./history.js";
 import {
   BOOK_PATH,
   check,
@@ -33,7 +34,8 @@ export class DailyEngine {
     this.visible = env.visible || (() => !document.hidden);
     this.locks = env.locks || globalThis.navigator?.locks;
     this.openStore = env.openStore || ((name) => new DailyStore(name));
-    this.report = recall() || { state: "IDLE", reason: "IDLE", attempts: 0 };
+    this.previous = recall();
+    this.report = { state: "IDLE", reason: "IDLE", attempts: 0 };
     this.running = false;
     this.waiting = false;
     this.reviewing = false;
@@ -41,12 +43,13 @@ export class DailyEngine {
     this.storeName = null;
     this.limitedUntil = 0;
     this.pageSuspended = false;
+    if (this.previous?.runId && this.previous.storageStatus !== "SAVED") this.archiveResult(this.previous);
   }
   view() {
     return {
-      ...publicDiagnostics(this.report),
+      ...publicDiagnostics(this.previous || this.report),
+      historical: Boolean(this.previous),
       message: this.message,
-      businessCode: this.report.businessCode ?? null,
       running: this.running,
       waiting: this.waiting,
       reviewing: this.reviewing,
@@ -62,8 +65,32 @@ export class DailyEngine {
   saveDisplay() {
     if (!remember(this.report, this.storeName)) this.report.diagnosticStorageFailed = true;
   }
+  archiveResult(report = this.report) {
+    if (!report.runId) return;
+    const snapshot = Symbol();
+    report.archiveSnapshot = snapshot;
+    report.storageStatus = null;
+    const row = publicDiagnostics({ ...report, storageStatus: "SAVED" });
+    if (row.state === "SENDING")
+      Object.assign(row, { state: "UNKNOWN", reason: "PENDING", message: REASONS.PENDING });
+    archive(row)
+      .then(() => {
+        if (report.archiveSnapshot === snapshot) report.storageStatus = "SAVED";
+      })
+      .catch(() => {
+        report.diagnosticStorageFailed = true;
+      })
+      .finally(() => {
+        if (report.archiveSnapshot !== snapshot) return;
+        if (this.previous === report) this.render();
+        if (this.report === report) {
+          this.saveDisplay();
+          this.render();
+        }
+      });
+  }
   emit(state, reason) {
-    Object.assign(this.report, { state, reason });
+    Object.assign(this.report, { state, reason, storageStatus: null, archiveSnapshot: null });
     this.saveDisplay();
     this.render();
   }
@@ -134,7 +161,9 @@ export class DailyEngine {
     this.controller = new AbortController();
     this.pageSuspended = !this.visible();
     const signal = this.controller.signal;
+    this.previous = null;
     this.report = {
+      runId: crypto.randomUUID(),
       task,
       state: "PREPARING",
       reason: "PREPARING",
@@ -155,11 +184,15 @@ export class DailyEngine {
           if (this.report.state === "SUCCESS" || this.report.verifiedAt) {
             await this.verify(signal);
             // A cancelled confirmed booking can be applied for again after a fresh official read.
-            if (this.report.verification !== "ABSENT") return;
+            if (this.report.verification !== "ABSENT") {
+              this.archiveResult({ ...fresh, state: "IDLE", reason: "DUPLICATE" });
+              return;
+            }
             delete this.store.data.requests[slotKey(this.report.task)];
             this.store.save();
             this.report = fresh;
           } else {
+            this.archiveResult({ ...fresh, state: "IDLE", reason: "DUPLICATE" });
             this.emit(
               this.report.accepted ? "ACCEPTED" : "UNKNOWN",
               this.report.reason === "SENDING" ? "PENDING" : this.report.reason,
@@ -187,6 +220,7 @@ export class DailyEngine {
         this.emit("IDLE", Object.hasOwn(REASONS, reason) ? reason : "LOCAL_ERROR");
       }
     } finally {
+      this.archiveResult();
       this.waiting = false;
       this.running = false;
       this.render();
@@ -252,7 +286,7 @@ export class DailyEngine {
         write: true,
         inspectHttpErrors: true,
         beforeDispatch: () => {
-          undo = this.store.intent(task, this.wall());
+          undo = this.store.intent(task, this.wall(), r.runId);
         },
         onDispatched: (at) => {
           r.attempts = 1;
@@ -265,6 +299,7 @@ export class DailyEngine {
           r.reason = "SENDING";
           this.saveReceipt();
           this.emit("SENDING", "SENDING");
+          this.archiveResult();
         },
         onHeaders: (sample) => {
           r.httpStatus = sample.status;
@@ -278,11 +313,14 @@ export class DailyEngine {
         },
       });
       r.requestStartAt = response.timing?.requestStartAt;
+      r.requestToFirstByteMs = response.timing?.requestToFirstByteMs;
+      r.responseDownloadMs = response.timing?.responseDownloadMs;
       r.businessAt = response.timing?.businessResultAt;
       r.businessCode = response.body?.CODE == null ? null : String(response.body.CODE);
       r.businessResult = response.body?.DATA?.result;
       this.message = String(response.body?.DATA?.msg || response.body?.MESSAGE || "").slice(0, 500);
       const reason = bookingResult(response.body, response.status);
+      if (reason !== "SERVER_SUCCESS") r.failureMessage = this.message;
       if (reason === "LIMITED") this.limit(banUntil(response.retryAfter, this.wall()));
       r.accepted = reason === "SERVER_SUCCESS";
       this.emit(r.accepted ? "ACCEPTED" : unresolved.has(reason) ? "UNKNOWN" : "FAILED", reason);
@@ -299,6 +337,8 @@ export class DailyEngine {
   }
   async verify(signal) {
     const r = this.report;
+    r.storageStatus = null;
+    r.archiveSnapshot = null;
     r.verification = "CHECKING";
     this.render();
     try {
@@ -321,6 +361,10 @@ export class DailyEngine {
     this.render();
   }
   async review() {
+    if (this.previous && !this.running) {
+      this.report = this.previous;
+      this.previous = null;
+    }
     if (this.running || !this.report.task || this.report.attempts === 0) return;
     this.running = this.reviewing = true;
     this.store = null;
@@ -331,7 +375,7 @@ export class DailyEngine {
       await this.withAccount(this.controller.signal, async () => {
         const saved = this.store.conflict(task);
         check(saved, "ACCOUNT_CHANGED");
-        this.report = restoredReport(saved);
+        this.report = { ...restoredReport(saved), runId: this.report.runId ?? saved.runId };
         if (this.report.state === "SENDING") {
           this.report.state = "UNKNOWN";
           this.report.reason = "PENDING";
@@ -343,11 +387,12 @@ export class DailyEngine {
       this.message = REASONS[codeOf(error)] || REASONS.LOCAL_ERROR;
       this.saveDisplay();
     } finally {
+      this.archiveResult();
       this.running = this.reviewing = false;
       this.render();
     }
   }
   diagnosticExport() {
-    return publicDiagnostics(this.report);
+    return publicDiagnostics(this.previous || this.report);
   }
 }

@@ -123,8 +123,14 @@ export class Transport {
               r.requestStart >= r.startTime &&
               r.requestStart > 0,
           );
-        if (candidates.length === 1)
+        if (candidates.length === 1) {
+          const entry = candidates[0];
+          if (entry.responseStart >= entry.requestStart)
+            timing.requestToFirstByteMs = entry.responseStart - entry.requestStart;
+          if (entry.responseStart > 0 && entry.responseEnd >= entry.responseStart)
+            timing.responseDownloadMs = entry.responseEnd - entry.responseStart;
           timing.requestStartAt = new Date(wall + candidates[0].requestStart - start).toISOString();
+        }
       } catch {
         /* Firefox or browser privacy settings may omit this measurement. */
       }

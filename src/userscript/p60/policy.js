@@ -1,7 +1,7 @@
 import { check, integer, parseRange, rangeMidnight, responseCode, shanghaiDate } from "../core.js";
 import { TASK } from "../p53/policy.js";
 
-export const VERSION = "6.2.0";
+export const VERSION = "6.3.0";
 export const DEFAULTS = Object.freeze({ startHour: 8, endHour: 22, offsetMs: 1350 });
 export const WRITE_INTERVAL = 10000;
 export const BAN_TIME = 600000;
@@ -101,6 +101,7 @@ export const REASONS = Object.freeze({
   SERVER_SUCCESS: "服务器返回预约成功",
   RECORD_VERIFIED: "官方记录已匹配",
   USER_STOPPED: "已停止待命，可以重新启动",
+  DUPLICATE: "已有预约申请，本次未发送",
   PENDING: "存在未决申请，请核验官方记录",
   EXISTING: "已有预约或申请时段冲突",
   NOT_OPEN: "馆方返回未开放",
@@ -144,6 +145,15 @@ const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
 const codes = new Set(["ok", "ParamError", "NotFound", "LIMITED", "AUTH_REQUIRED", "0", "1"]);
 
 // This allowlist also applies to restored data. Raw response text never enters exported JSON.
+// Only retain verbatim recognized fragments. Unknown text may include names or credentials.
+export function safeMessage(value) {
+  return typeof value === "string"
+    ? (value.match(
+        /选择的座位无法预约，可能座位不可用或已经被其他人锁定或占用|未到(?:预约|开放)时间|座位不可用，已被占用|超出可预约座位时间范围|请求过于频繁，请10分钟后再试|请求太频繁了|座位不可用|已有预约|重复预约/,
+      )?.[0] ?? null)
+    : null;
+}
+
 export function publicDiagnostics(row = {}) {
   const task = row.task || {};
   const number = (n) => (Number.isFinite(n) ? n : null);
@@ -151,6 +161,11 @@ export function publicDiagnostics(row = {}) {
   const reason = Object.hasOwn(REASONS, row.reason) ? row.reason : "LOCAL_ERROR";
   return {
     version: VERSION,
+    runId: /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(row.runId) ? row.runId : null,
+    storageStatus: row.diagnosticStorageFailed ? "ERROR" : row.storageStatus === "SAVED" ? "SAVED" : null,
+    failureMessage: safeMessage(row.failureMessage),
+    requestToFirstByteMs: number(row.requestToFirstByteMs),
+    responseDownloadMs: number(row.responseDownloadMs),
     room: TASK.room,
     floorId: TASK.floorId,
     seat: TASK.seat,

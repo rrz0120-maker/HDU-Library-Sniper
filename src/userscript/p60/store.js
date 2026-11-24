@@ -54,13 +54,14 @@ export class DailyStore {
       if (key.slice(0, 10) < today) delete this.data.requests[key];
     }
   }
-  intent(task, now) {
+  intent(task, now, runId) {
     const key = slotKey(task);
     const old = this.data.requests[key],
       next = this.data.nextWrite;
     this.data.nextWrite = now + WRITE_INTERVAL;
     this.data.requests[key] = publicDiagnostics({
       task,
+      runId,
       plannedAt: new Date(task.planned).toISOString(),
       state: "UNKNOWN",
       reason: "PENDING",
@@ -100,7 +101,10 @@ export function recall() {
     const name = sessionStorage.getItem(LAST_ACCOUNT);
     if (/^hdu-p62:[a-f0-9]{64}$/.test(name)) {
       const stored = JSON.parse(localStorage.getItem(name))?.requests?.[slotKey(report.task)];
-      if (stored?.plannedAt === report.plannedAt) report = restoredReport(stored);
+      // A reload can land between the durable write intent and the session update.
+      const interrupted = ["WAITING", "PREPARING", "SENDING"].includes(report.state);
+      const sameRun = !report.runId || report.runId === stored?.runId;
+      if (stored?.plannedAt === report.plannedAt && sameRun && interrupted) report = restoredReport(stored);
     }
   } catch {
     /* Optional display history cannot cancel a fresh preparation. */
