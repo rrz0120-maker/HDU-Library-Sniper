@@ -4,6 +4,8 @@
 
 <h1 align="center">HDU Library Sniper</h1>
 
+**iPad V10.0 Lite** 提供最近 30 次脱敏诊断与未决核验，真实 iPad 高峰验收待完成。[安装包](releases/HDU_iPad_V10.0_Lite.zip) · [安装与回滚](docs/IPAD-V10-INSTALL.md) · [审计](docs/IPAD-V10-AUDIT.md) · [验证与时延](docs/IPAD-V10-TESTS.md)
+
 **iPad V9 Lite** 使用 Safari 与 Userscripts，可预约四楼 162 号。默认在北京时间 20:00:01.200 发出首次请求。[安装与使用](docs/IPAD-V9-LITE.md) · [模拟性能报告](docs/IPAD-V9-TESTS.md)
 
 

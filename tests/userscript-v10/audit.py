@@ -189,10 +189,20 @@ def stale_tab_review(b,mock):
         assert snapshot(stale)==verified and len(f.posts)==1
     print("PASS stale-tab login failure preserves other tab's later verified receipt",flush=True)
 
+def delayed_success(b,mock):
+    with v9.case(b,mock,pause_book=9.0) as (ctx,f):
+        p=v9.visit(ctx)
+        p.set_default_timeout(14000)
+        v9.start(p)
+        v9.wait_report(p,state="sending",sends=1)
+        r=v9.wait_report(p,state="verified",verification="matched")
+        assert r["httpMs"]>=8900 and r["accepted"] and len(f.posts)==1 and snapshot(p)==r
+    print("PASS nine-second successful response remains verifiable",flush=True)
+
 if __name__=="__main__":
     with v9.Mock() as mock,sync_playwright() as pw:
         install(mock,10)
         b=v9.launch(pw.webkit,mock)
-        for fn in [platform,replies_and_restore,lifecycle_and_migration,stale_tab_review]:
+        for fn in [platform,replies_and_restore,lifecycle_and_migration,stale_tab_review,delayed_success]:
             if not sys.argv[1:] or fn.__name__ in sys.argv[1:]: fn(b,mock)
         b.close()

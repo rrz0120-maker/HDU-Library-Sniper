@@ -1,0 +1,779 @@
+{
+  "webkit": "26.5",
+  "sha256": {
+    "9": "8dd8bc200d00cbf2b0834c6830a124e0341f289212a5518d2740178dfd7c430b",
+    "10": "2191a10295167f0db502ed7b88276bd8bc440a63906d08bfdae30f7c3070e3ef"
+  },
+  "rows": [
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1207.4,
+      "httpMs": 7,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1203,
+      "lagMs": 3,
+      "fetchToRequestMs": 7,
+      "receiverMs": 1209.9,
+      "httpMs": 9,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 6,
+      "receiverMs": 1208.7,
+      "httpMs": 8,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1204,
+      "lagMs": 4,
+      "fetchToRequestMs": 4,
+      "receiverMs": 1210.0,
+      "httpMs": 12,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1207.3,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1201,
+      "lagMs": 1,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1207.1,
+      "httpMs": 10,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1214,
+      "lagMs": 14,
+      "fetchToRequestMs": 10,
+      "receiverMs": 1227.5,
+      "httpMs": 16,
+      "archiveSaveMs": 1,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1208,
+      "lagMs": 8,
+      "fetchToRequestMs": 131,
+      "receiverMs": 1340.3,
+      "httpMs": 134,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1209,
+      "lagMs": 9,
+      "fetchToRequestMs": 7,
+      "receiverMs": 1217.1,
+      "httpMs": 9,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1214,
+      "lagMs": 14,
+      "fetchToRequestMs": 18,
+      "receiverMs": 1232.9,
+      "httpMs": 21,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1205,
+      "lagMs": 5,
+      "fetchToRequestMs": 15,
+      "receiverMs": 1220.6,
+      "httpMs": 19,
+      "archiveSaveMs": 2,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1204,
+      "lagMs": 4,
+      "fetchToRequestMs": 13,
+      "receiverMs": 1218.5,
+      "httpMs": 17,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1210,
+      "lagMs": 10,
+      "fetchToRequestMs": 9,
+      "receiverMs": 1219.0,
+      "httpMs": 11,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 3,
+      "receiverMs": 1205.7,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1204,
+      "lagMs": 4,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1209.7,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1204,
+      "lagMs": 4,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1211.4,
+      "httpMs": 8,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1204,
+      "lagMs": 4,
+      "fetchToRequestMs": 7,
+      "receiverMs": 1215.5,
+      "httpMs": 13,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1203,
+      "lagMs": 3,
+      "fetchToRequestMs": 3,
+      "receiverMs": 1207.8,
+      "httpMs": 6,
+      "archiveSaveMs": 1,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 6,
+      "receiverMs": 1208.4,
+      "httpMs": 8,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 4,
+      "receiverMs": 1206.6,
+      "httpMs": 7,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1207.2,
+      "httpMs": 7,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1203,
+      "lagMs": 3,
+      "fetchToRequestMs": 3,
+      "receiverMs": 1207.8,
+      "httpMs": 9,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "dispatchMs": 1203,
+      "lagMs": 3,
+      "fetchToRequestMs": 6,
+      "receiverMs": 1209.6,
+      "httpMs": 8,
+      "archiveSaveMs": 1,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 0,
+      "dispatchMs": 1202,
+      "lagMs": 2,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1208.8,
+      "httpMs": 8,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        null,
+        null
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 450,
+      "dispatchMs": 1456,
+      "lagMs": 256,
+      "fetchToRequestMs": 4,
+      "receiverMs": 1460.9,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1001,
+        1451
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 450,
+      "dispatchMs": 1452,
+      "lagMs": 252,
+      "fetchToRequestMs": 3,
+      "receiverMs": 1456.7,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1000,
+        1450
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 450,
+      "dispatchMs": 1457,
+      "lagMs": 257,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1463.0,
+      "httpMs": 13,
+      "archiveSaveMs": 1,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1002,
+        1452
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 450,
+      "dispatchMs": 1453,
+      "lagMs": 253,
+      "fetchToRequestMs": 4,
+      "receiverMs": 1458.1,
+      "httpMs": 9,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1001,
+        1450
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 450,
+      "dispatchMs": 1452,
+      "lagMs": 252,
+      "fetchToRequestMs": 6,
+      "receiverMs": 1459.5,
+      "httpMs": 8,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1000,
+        1450
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 450,
+      "dispatchMs": 1458,
+      "lagMs": 258,
+      "fetchToRequestMs": 5,
+      "receiverMs": 1463.6,
+      "httpMs": 8,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1000,
+        1452
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 1300,
+      "dispatchMs": 2303,
+      "lagMs": 1103,
+      "fetchToRequestMs": 3,
+      "receiverMs": 2307.8,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1000,
+        2300
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 1300,
+      "dispatchMs": 2306,
+      "lagMs": 1106,
+      "fetchToRequestMs": 12,
+      "receiverMs": 2322.7,
+      "httpMs": 20,
+      "archiveSaveMs": 1,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1000,
+        2300
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 1300,
+      "dispatchMs": 2302,
+      "lagMs": 1102,
+      "fetchToRequestMs": 4,
+      "receiverMs": 2306.6,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1000,
+        2299
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 1300,
+      "dispatchMs": 2303,
+      "lagMs": 1103,
+      "fetchToRequestMs": 5,
+      "receiverMs": 2307.9,
+      "httpMs": 7,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1000,
+        2299
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 1300,
+      "dispatchMs": 2303,
+      "lagMs": 1103,
+      "fetchToRequestMs": 4,
+      "receiverMs": 2308.5,
+      "httpMs": 6,
+      "archiveSaveMs": 0,
+      "archiveWrites": 0,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1001,
+        2300
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 1300,
+      "dispatchMs": 2303,
+      "lagMs": 1103,
+      "fetchToRequestMs": 3,
+      "receiverMs": 2306.9,
+      "httpMs": 8,
+      "archiveSaveMs": 1,
+      "archiveWrites": 3,
+      "postCount": 1,
+      "preGetCount": 1,
+      "blockBounds": [
+        1001,
+        2300
+      ]
+    }
+  ],
+  "summary": [
+    {
+      "version": 9,
+      "blockMs": 0,
+      "n": 12,
+      "hits": 12,
+      "lagMs": [
+        4.0,
+        10,
+        10
+      ],
+      "fetchToRequestMs": [
+        5.0,
+        131,
+        131
+      ],
+      "httpMs": [
+        8.5,
+        134,
+        134
+      ],
+      "archiveSaveMs": [
+        0.0,
+        0,
+        0
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 0,
+      "n": 12,
+      "hits": 12,
+      "lagMs": [
+        3.0,
+        14,
+        14
+      ],
+      "fetchToRequestMs": [
+        6.0,
+        18,
+        18
+      ],
+      "httpMs": [
+        8.5,
+        21,
+        21
+      ],
+      "archiveSaveMs": [
+        0.0,
+        2,
+        2
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 450,
+      "n": 3,
+      "hits": 3,
+      "lagMs": [
+        253,
+        256,
+        256
+      ],
+      "fetchToRequestMs": [
+        4,
+        6,
+        6
+      ],
+      "httpMs": [
+        8,
+        9,
+        9
+      ],
+      "archiveSaveMs": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 450,
+      "n": 3,
+      "hits": 3,
+      "lagMs": [
+        257,
+        258,
+        258
+      ],
+      "fetchToRequestMs": [
+        5,
+        5,
+        5
+      ],
+      "httpMs": [
+        8,
+        13,
+        13
+      ],
+      "archiveSaveMs": [
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "version": 9,
+      "blockMs": 1300,
+      "n": 3,
+      "hits": 0,
+      "lagMs": [
+        1103,
+        1103,
+        1103
+      ],
+      "fetchToRequestMs": [
+        4,
+        5,
+        5
+      ],
+      "httpMs": [
+        6,
+        7,
+        7
+      ],
+      "archiveSaveMs": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "version": 10,
+      "blockMs": 1300,
+      "n": 3,
+      "hits": 0,
+      "lagMs": [
+        1103,
+        1106,
+        1106
+      ],
+      "fetchToRequestMs": [
+        4,
+        12,
+        12
+      ],
+      "httpMs": [
+        8,
+        20,
+        20
+      ],
+      "archiveSaveMs": [
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}
