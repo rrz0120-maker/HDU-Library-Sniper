@@ -1,5 +1,5 @@
 import { check, TestError } from "../core.js";
-import { publicDiagnostics, restoredReport, WRITE_INTERVAL } from "./policy.js";
+import { CLASSIFIER_VERSION, publicDiagnostics, restoredReport, VERSION, WRITE_INTERVAL } from "./policy.js";
 
 export const LAST_REPORT = "hdu-p62:last-report";
 export const LAST_ACCOUNT = "hdu-p62:last-store";
@@ -60,6 +60,8 @@ export class DailyStore {
       next = this.data.nextWrite;
     this.data.nextWrite = now + WRITE_INTERVAL;
     this.data.requests[key] = publicDiagnostics({
+      version: VERSION,
+      classifierVersion: CLASSIFIER_VERSION,
       task,
       runId,
       plannedAt: new Date(task.planned).toISOString(),

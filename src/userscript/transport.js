@@ -105,8 +105,10 @@ export class Transport {
       try {
         body = await response.json();
       } catch (error) {
-        if (inspectHttpErrors && error instanceof SyntaxError) body = null;
-        else throw error;
+        if (inspectHttpErrors && error instanceof SyntaxError) {
+          body = null;
+          timing.invalidJson = true;
+        } else throw error;
       }
       timing.bodyDecodeMs = performance.now() - decode;
       timing.businessResultAt = new Date(Date.now()).toISOString();

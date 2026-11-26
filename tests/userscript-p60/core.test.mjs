@@ -136,7 +136,7 @@ test("official record verifier accepts exact active slot, rejects a different du
 for (const [status, body, expected] of [
   [200, { CODE: "ok", DATA: { result: "success" } }, "SERVER_SUCCESS"],
   [200, { CODE: "ParamError", DATA: { msg: "未到开放时间" }, MESSAGE: "其他" }, "NOT_OPEN"],
-  [200, { CODE: "ParamError", MESSAGE: "超出可预约座位时间范围" }, "NOT_OPEN"],
+  [200, { CODE: "ParamError", MESSAGE: "超出可预约座位时间范围" }, "TIME_RANGE_INVALID"],
   [200, { CODE: "ParamError", MESSAGE: "时间范围参数无效" }, "BUSINESS_REJECTED"],
   [200, { CODE: "ParamError", MESSAGE: "座位不可用" }, "SEAT_UNAVAILABLE"],
   [200, { CODE: "ParamError", MESSAGE: "已有预约，请勿重复预约！" }, "EXISTING"],

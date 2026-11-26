@@ -13,6 +13,9 @@ import { accountKey } from "../ledger.js";
 import { RECORD_PATH, verified162 } from "../p53/policy.js";
 import {
   banUntil,
+  VERSION,
+  CLASSIFIER_VERSION,
+  receiptMissing,
   bookingResult,
   nextCheckMs,
   preparationRange,
@@ -23,7 +26,14 @@ import {
 } from "./policy.js";
 import { DailyStore, recall, remember, slotKey } from "./store.js";
 
-const unresolved = new Set(["TIMEOUT", "NETWORK_ERROR", "HTTP_404", "HTTP_ERROR", "RESPONSE_UNKNOWN"]);
+const unresolved = new Set([
+  "TIMEOUT",
+  "NETWORK_ERROR",
+  "HTTP_404",
+  "HTTP_ERROR",
+  "RESPONSE_UNKNOWN",
+  "INVALID_RESPONSE",
+]);
 
 export class DailyEngine {
   constructor(io, notify = () => {}, env = {}) {
@@ -163,6 +173,8 @@ export class DailyEngine {
     const signal = this.controller.signal;
     this.previous = null;
     this.report = {
+      version: VERSION,
+      classifierVersion: CLASSIFIER_VERSION,
       runId: crypto.randomUUID(),
       task,
       state: "PREPARING",
@@ -319,7 +331,8 @@ export class DailyEngine {
       r.businessCode = response.body?.CODE == null ? null : String(response.body.CODE);
       r.businessResult = response.body?.DATA?.result;
       this.message = String(response.body?.DATA?.msg || response.body?.MESSAGE || "").slice(0, 500);
-      const reason = bookingResult(response.body, response.status);
+      r.missingFields = receiptMissing(response.body, response.timing?.invalidJson);
+      const reason = bookingResult(response.body, response.status, response.timing?.invalidJson);
       if (reason !== "SERVER_SUCCESS") r.failureMessage = this.message;
       if (reason === "LIMITED") this.limit(banUntil(response.retryAfter, this.wall()));
       r.accepted = reason === "SERVER_SUCCESS";

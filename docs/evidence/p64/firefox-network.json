@@ -1,0 +1,1430 @@
+{
+  "kind": "SIMULATED",
+  "browser": "153.0",
+  "rows": [
+    {
+      "case": "seat",
+      "version": "6.3",
+      "reason": "SEAT_UNAVAILABLE",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "seat",
+      "version": "6.4",
+      "reason": "SEAT_UNAVAILABLE",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "account",
+      "version": "6.3",
+      "reason": "SEAT_UNAVAILABLE",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "account",
+      "version": "6.4",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "accountLocked",
+      "version": "6.3",
+      "reason": "SEAT_UNAVAILABLE",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "accountLocked",
+      "version": "6.4",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "occupied",
+      "version": "6.3",
+      "reason": "SEAT_UNAVAILABLE",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "occupied",
+      "version": "6.4",
+      "reason": "SEAT_UNAVAILABLE",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "unknownSeat",
+      "version": "6.3",
+      "reason": "SEAT_UNAVAILABLE",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "unknownSeat",
+      "version": "6.4",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "parameter",
+      "version": "6.3",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "parameter",
+      "version": "6.4",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "opening",
+      "version": "6.3",
+      "reason": "NOT_OPEN",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "opening",
+      "version": "6.4",
+      "reason": "NOT_OPEN",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "range",
+      "version": "6.3",
+      "reason": "NOT_OPEN",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "range",
+      "version": "6.4",
+      "reason": "TIME_RANGE_INVALID",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "existing",
+      "version": "6.3",
+      "reason": "EXISTING",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "existing",
+      "version": "6.4",
+      "reason": "EXISTING",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "limit",
+      "version": "6.3",
+      "reason": "LIMITED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "limit",
+      "version": "6.4",
+      "reason": "LIMITED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "http429",
+      "version": "6.3",
+      "reason": "LIMITED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "http429",
+      "version": "6.4",
+      "reason": "LIMITED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "auth",
+      "version": "6.3",
+      "reason": "AUTH_REQUIRED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "auth",
+      "version": "6.4",
+      "reason": "AUTH_REQUIRED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "authText",
+      "version": "6.3",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "authText",
+      "version": "6.4",
+      "reason": "AUTH_REQUIRED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "authCode",
+      "version": "6.3",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "authCode",
+      "version": "6.4",
+      "reason": "AUTH_REQUIRED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "http404",
+      "version": "6.3",
+      "reason": "HTTP_404",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "http404",
+      "version": "6.4",
+      "reason": "HTTP_404",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "http503",
+      "version": "6.3",
+      "reason": "HTTP_ERROR",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "http503",
+      "version": "6.4",
+      "reason": "HTTP_ERROR",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "invalid",
+      "version": "6.3",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "invalid",
+      "version": "6.4",
+      "reason": "INVALID_RESPONSE",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "jsonNull",
+      "version": "6.3",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "jsonNull",
+      "version": "6.4",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "empty",
+      "version": "6.3",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "empty",
+      "version": "6.4",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "codeOnly",
+      "version": "6.3",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "codeOnly",
+      "version": "6.4",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "unknownText",
+      "version": "6.3",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "unknownText",
+      "version": "6.4",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "unknownCode",
+      "version": "6.3",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "unknownCode",
+      "version": "6.4",
+      "reason": "RESPONSE_UNKNOWN",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "genericFail",
+      "version": "6.3",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "genericFail",
+      "version": "6.4",
+      "reason": "BUSINESS_REJECTED",
+      "state": "FAILED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "network",
+      "version": "6.3",
+      "reason": "NETWORK_ERROR",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "network",
+      "version": "6.4",
+      "reason": "NETWORK_ERROR",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "timeout",
+      "version": "6.3",
+      "reason": "TIMEOUT",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "timeout",
+      "version": "6.4",
+      "reason": "TIMEOUT",
+      "state": "UNKNOWN",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "acceptedAbsent",
+      "version": "6.3",
+      "reason": "SERVER_SUCCESS",
+      "state": "ACCEPTED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/myBookingList?fromType=web&LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "acceptedAbsent",
+      "version": "6.4",
+      "reason": "SERVER_SUCCESS",
+      "state": "ACCEPTED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/myBookingList?fromType=web&LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "verifyError",
+      "version": "6.3",
+      "reason": "SERVER_SUCCESS",
+      "state": "ACCEPTED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/myBookingList?fromType=web&LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "verifyError",
+      "version": "6.4",
+      "reason": "SERVER_SUCCESS",
+      "state": "ACCEPTED",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/myBookingList?fromType=web&LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "verified",
+      "version": "6.3",
+      "reason": "SERVER_SUCCESS",
+      "state": "SUCCESS",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/myBookingList?fromType=web&LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    },
+    {
+      "case": "verified",
+      "version": "6.4",
+      "reason": "SERVER_SUCCESS",
+      "state": "SUCCESS",
+      "network": [
+        [
+          "GET",
+          "/User/Center/baseInfo"
+        ],
+        [
+          "GET",
+          "/Space/Category/list?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/searchSeats?group=1&LAB_JSON=1"
+        ],
+        [
+          "POST",
+          "/Seat/Index/bookSeats?LAB_JSON=1"
+        ],
+        [
+          "GET",
+          "/Seat/Index/myBookingList?fromType=web&LAB_JSON=1"
+        ]
+      ],
+      "posts": 1
+    }
+  ]
+}

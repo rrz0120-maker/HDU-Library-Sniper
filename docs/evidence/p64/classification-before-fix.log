@@ -1,0 +1,137 @@
+✔ ParamError 选择的座位无法预约，可能座位不可用或已经被其他人锁定或占用。 (1.331463ms)
+✖ ParamError 该账户无法预约 (1.504469ms)
+✔ ParamError 参数错误 (0.856178ms)
+✔ ParamError 未到开放时间 (0.164694ms)
+✔ ParamError 预约时间尚未开放 (0.132366ms)
+✖ ParamError 超出可预约座位时间范围 (0.258403ms)
+✔ ParamError 已有预约 (0.119928ms)
+✔ ParamError 请求过于频繁，请10分钟后再试 (0.111665ms)
+✖ ParamError 无法识别的新消息 (0.266435ms)
+✖ ParamError without a rejection signal stays unresolved (0.397979ms)
+✖ explicit authentication code (0.335036ms)
+✔ HTTP 200 alone and partial success fields are unresolved (0.228689ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 7
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92.873398
+
+✖ failing tests:
+
+test at tests/userscript-p64/classification.test.mjs:17:3
+✖ ParamError 该账户无法预约 (1.504469ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SEAT_UNAVAILABLE'
+  - 'BUSINESS_REJECTED'
+  
+      at TestContext.<anonymous> (file:///workspace/work/p64/tests/userscript-p64/classification.test.mjs:18:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SEAT_UNAVAILABLE',
+    expected: 'BUSINESS_REJECTED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/userscript-p64/classification.test.mjs:17:3
+✖ ParamError 超出可预约座位时间范围 (0.258403ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'NOT_OPEN'
+  - 'TIME_RANGE_INVALID'
+  
+      at TestContext.<anonymous> (file:///workspace/work/p64/tests/userscript-p64/classification.test.mjs:18:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'NOT_OPEN',
+    expected: 'TIME_RANGE_INVALID',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/userscript-p64/classification.test.mjs:17:3
+✖ ParamError 无法识别的新消息 (0.266435ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'BUSINESS_REJECTED'
+  - 'RESPONSE_UNKNOWN'
+  
+      at TestContext.<anonymous> (file:///workspace/work/p64/tests/userscript-p64/classification.test.mjs:18:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'BUSINESS_REJECTED',
+    expected: 'RESPONSE_UNKNOWN',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/userscript-p64/classification.test.mjs:21:1
+✖ ParamError without a rejection signal stays unresolved (0.397979ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'BUSINESS_REJECTED'
+  - 'RESPONSE_UNKNOWN'
+  
+      at TestContext.<anonymous> (file:///workspace/work/p64/tests/userscript-p64/classification.test.mjs:22:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'BUSINESS_REJECTED',
+    expected: 'RESPONSE_UNKNOWN',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/userscript-p64/classification.test.mjs:24:1
+✖ explicit authentication code (0.335036ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'RESPONSE_UNKNOWN'
+  - 'AUTH_REQUIRED'
+  
+      at TestContext.<anonymous> (file:///workspace/work/p64/tests/userscript-p64/classification.test.mjs:25:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'RESPONSE_UNKNOWN',
+    expected: 'AUTH_REQUIRED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

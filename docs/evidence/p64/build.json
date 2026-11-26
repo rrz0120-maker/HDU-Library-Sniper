@@ -1,0 +1,67 @@
+{
+  "status": "RELEASE_CANDIDATE",
+  "baselineCommit": "dccafec5d02993cb31e85f9d19bee6e9e461ee7f",
+  "candidateVersion": "6.4.0",
+  "classifierVersion": "p64.1",
+  "baselineSHA256": "5dfafed08e624d4acab18700b71c5346d1cc752682a25636a5f4c0d0db1b86a0",
+  "candidateSHA256": "ac9ec4b333528c66fed4fdd17ebd0ec670b171e0818a85d87a32214a7ac1e3e6",
+  "coreStrategyUnchanged": true,
+  "modelConfiguration": "NOT_EXPOSED",
+  "reasoningEffort": "NOT_EXPOSED",
+  "unchangedChecks": {
+    "dailyTask": true,
+    "validateDailyTask": true,
+    "preparationRange": true,
+    "nextCheckMs": true,
+    "banUntil": true,
+    "wait": true,
+    "pageLifecycleAndStop": true,
+    "verify": true,
+    "src/userscript/core.js": true,
+    "src/userscript/p60/entry.js": true,
+    "src/userscript/p53/policy.js": true,
+    "userscripts/HDU_Android_P6.3_Lite.user.js": true
+  },
+  "runtime": {
+    "node": "24.22.3",
+    "python": "3.12.14",
+    "vite": "7.3.6",
+    "biome": "2.6.5",
+    "pythonPlaywright": "1.62.0"
+  },
+  "deterministicRebuild": true,
+  "baselineRestoreHashVerified": true,
+  "nodeTests": {
+    "passed": 120,
+    "failed": 0
+  },
+  "browserTests": {
+    "chromium": {
+      "version": "156.0.8078.79",
+      "passedGroups": 45,
+      "pairedCases": 28,
+      "equalInitialNetworkSequences": true,
+      "onePostPerCase": true
+    },
+    "firefox": {
+      "version": "153.0",
+      "passedGroups": 45,
+      "pairedCases": 28,
+      "equalInitialNetworkSequences": true,
+      "onePostPerCase": true
+    }
+  },
+  "releaseGates": {
+    "classificationFixed": true,
+    "targetedTestsPassed": true,
+    "coreRegressionsPassed": true,
+    "noAddedNetworkActionsInPairedCases": true,
+    "duplicateWriteProtectionPreserved": true,
+    "pendingIntentProtectionPreserved": true,
+    "legacyHistoryCompatible": true,
+    "timingStrategyUnchanged": true,
+    "rollbackVerifiedOffline": true,
+    "unverifiedItemsDisclosed": true
+  },
+  "realDevice": "REAL_DEVICE_UNVERIFIED"
+}

@@ -1,7 +1,8 @@
 import { check, integer, parseRange, rangeMidnight, responseCode, shanghaiDate } from "../core.js";
 import { TASK } from "../p53/policy.js";
 
-export const VERSION = "6.3.0";
+export const VERSION = "6.4.0";
+export const CLASSIFIER_VERSION = "p64.1";
 export const DEFAULTS = Object.freeze({ startHour: 8, endHour: 22, offsetMs: 1350 });
 export const WRITE_INTERVAL = 10000;
 export const BAN_TIME = 600000;
@@ -60,21 +61,26 @@ export function nextCheckMs(remaining) {
   return Math.min(remaining - 5000, 1000);
 }
 
-export function bookingResult(body, status = 200) {
+export function bookingResult(body, status = 200, invalidJson = false) {
   const code = responseCode(body);
   if (status === 429 || body?.CODE === "LIMITED" || code === "LIMITED") return "LIMITED";
-  if (status === 401 || code === "AUTH_REQUIRED") return "AUTH_REQUIRED";
+  if (status === 401 || body?.CODE === "AUTH_REQUIRED" || code === "AUTH_REQUIRED") return "AUTH_REQUIRED";
   if (status === 404 || code === "HTTP_404") return "HTTP_404";
-  if (status >= 400) return "HTTP_ERROR";
+  if (status < 200 || status >= 300) return "HTTP_ERROR";
+  if (invalidJson) return "INVALID_RESPONSE";
   if (body?.CODE === "ParamError") {
     const message = String(body.DATA?.msg || body.MESSAGE || "");
-    if (/未到(?:预约|开放)时间|(?:预约日期|预约时间)(?:尚)?未开放|超出可预约座位时间范围/.test(message))
-      return "NOT_OPEN";
-    if (code === "EXISTING" || code === "SEAT_UNAVAILABLE") return code;
-    return "BUSINESS_REJECTED";
+    if (/未登录|登录(?:状态)?已失效|登录(?:已)?过期|身份验证失败/.test(message)) return "AUTH_REQUIRED";
+    if (/超出可预约座位时间范围/.test(message)) return "TIME_RANGE_INVALID";
+    if (/未到(?:预约|开放)时间|(?:预约日期|预约时间)(?:尚)?未开放/.test(message)) return "NOT_OPEN";
+    if (code === "EXISTING") return code;
+    if (/座位不可用|座位无法预约|座位(?:已经?)?(?:被(?:其他人|他人)?)?(?:锁定|占用)/.test(message))
+      return "SEAT_UNAVAILABLE";
+    if (/账户无法预约|账号无法预约|参数(?:错误|无效)|无法预约/.test(message)) return "BUSINESS_REJECTED";
+    return body?.DATA?.result === "fail" ? "BUSINESS_REJECTED" : "RESPONSE_UNKNOWN";
   }
-  if (code === "RESPONSE_UNKNOWN" && body?.DATA?.result === "fail") return "BUSINESS_REJECTED";
-  return code;
+  if (body?.DATA?.result === "fail") return "BUSINESS_REJECTED";
+  return code === "SERVER_SUCCESS" ? code : "RESPONSE_UNKNOWN";
 }
 
 export function banUntil(retryAfter, now) {
@@ -87,10 +93,10 @@ export const STATES = Object.freeze({
   IDLE: "未启动",
   PREPARING: "准备中",
   WAITING: "等待20:00",
-  SENDING: "正在发送",
-  ACCEPTED: "服务器已受理",
+  SENDING: "已发出，等待回执",
+  ACCEPTED: "已受理，尚未核验成功",
   SUCCESS: "预约成功且记录已核验",
-  FAILED: "预约失败",
+  FAILED: "业务明确拒绝",
   UNKNOWN: "结果待核实",
 });
 export const REASONS = Object.freeze({
@@ -105,6 +111,8 @@ export const REASONS = Object.freeze({
   PENDING: "存在未决申请，请核验官方记录",
   EXISTING: "已有预约或申请时段冲突",
   NOT_OPEN: "馆方返回未开放",
+  TIME_RANGE_INVALID: "馆方返回超出允许预约时间范围",
+  INVALID_RESPONSE: "响应无法解析，预约结果待核实",
   SEAT_UNAVAILABLE: "馆方返回座位不可用或已被占用",
   LIMITED: "馆方限流，写入已停止",
   AUTH_REQUIRED: "请在官网重新登录",
@@ -149,18 +157,53 @@ const codes = new Set(["ok", "ParamError", "NotFound", "LIMITED", "AUTH_REQUIRED
 export function safeMessage(value) {
   return typeof value === "string"
     ? (value.match(
-        /选择的座位无法预约，可能座位不可用或已经被其他人锁定或占用|未到(?:预约|开放)时间|座位不可用，已被占用|超出可预约座位时间范围|请求过于频繁，请10分钟后再试|请求太频繁了|座位不可用|已有预约|重复预约/,
+        /选择的座位无法预约，可能座位不可用或已经被其他人锁定或占用|未到(?:预约|开放)时间|座位不可用，已被占用|(?:预约日期|预约时间)(?:尚)?未开放|未登录|登录(?:状态)?已失效|登录(?:已)?过期|身份验证失败|该账户无法预约|该账号无法预约|参数错误|参数无效|超出可预约座位时间范围|请求过于频繁，请10分钟后再试|请求太频繁了|座位不可用|已有预约|重复预约/,
       )?.[0] ?? null)
     : null;
 }
 
+export function receiptMissing(body, invalidJson = false) {
+  const message = body?.DATA?.msg || body?.MESSAGE;
+  const status = (value, allowed) =>
+    invalidJson ? "INVALID_RESPONSE" : value == null ? "ABSENT" : allowed ? null : "REDACTED";
+  return {
+    businessCode: status(body?.CODE, codes.has(body?.CODE)),
+    businessResult: status(body?.DATA?.result, ["success", "fail"].includes(body?.DATA?.result)),
+    failureMessage:
+      body?.CODE === "ok" && body?.DATA?.result === "success"
+        ? "NOT_APPLICABLE"
+        : status(message, safeMessage(message) !== null),
+  };
+}
+
+const missingStatuses = new Set([
+  "ABSENT",
+  "REDACTED",
+  "INVALID_RESPONSE",
+  "NOT_OBSERVED",
+  "NOT_APPLICABLE",
+  "LEGACY_NOT_RECORDED",
+]);
 export function publicDiagnostics(row = {}) {
   const task = row.task || {};
   const number = (n) => (Number.isFinite(n) ? n : null);
   const stamp = (s) => (typeof s === "string" && ISO.test(s) ? s : null);
   const reason = Object.hasOwn(REASONS, row.reason) ? row.reason : "LOCAL_ERROR";
   return {
-    version: VERSION,
+    version: ["6.2.0", "6.3.0", VERSION].includes(row.version) ? row.version : null,
+    classifierVersion: row.classifierVersion === CLASSIFIER_VERSION ? CLASSIFIER_VERSION : null,
+    missingFields: Object.fromEntries(
+      ["httpStatus", "businessCode", "businessResult", "failureMessage"].map((key) => [
+        key,
+        missingStatuses.has(row.missingFields?.[key])
+          ? row.missingFields[key]
+          : row[key] != null
+            ? null
+            : row.version === VERSION
+              ? "NOT_OBSERVED"
+              : "LEGACY_NOT_RECORDED",
+      ]),
+    ),
     runId: /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(row.runId) ? row.runId : null,
     storageStatus: row.diagnosticStorageFailed ? "ERROR" : row.storageStatus === "SAVED" ? "SAVED" : null,
     failureMessage: safeMessage(row.failureMessage),
@@ -192,12 +235,12 @@ export function publicDiagnostics(row = {}) {
     httpStatus: number(row.httpStatus),
     businessCode: codes.has(row.businessCode) ? row.businessCode : row.businessCode ? "OTHER" : null,
     businessResult: ["success", "fail"].includes(row.businessResult) ? row.businessResult : null,
-    accepted: row.accepted === true,
-    recordVerified: row.recordVerified === true,
+    accepted: typeof row.accepted === "boolean" ? row.accepted : null,
+    recordVerified: typeof row.recordVerified === "boolean" ? row.recordVerified : null,
     verification: Object.hasOwn(VERIFICATIONS, row.verification) ? row.verification : "NONE",
     attempts: [0, 1].includes(row.attempts) ? row.attempts : null,
     inWindow: typeof row.inWindow === "boolean" ? row.inWindow : null,
-    hiddenDuringWait: row.hiddenDuringWait === true,
+    hiddenDuringWait: typeof row.hiddenDuringWait === "boolean" ? row.hiddenDuringWait : null,
     nextWriteAt: stamp(row.nextWriteAt),
     diagnosticStorageFailed: row.diagnosticStorageFailed === true,
   };

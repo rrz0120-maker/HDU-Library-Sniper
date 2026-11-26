@@ -1,0 +1,46 @@
+scripts/build-userscript-p63.mjs:7:52 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    5 │ const path = "userscripts/HDU_Android_P6.3_Lite.user.js";
+    6 │ const baseline = "dccafec5d02993cb31e85f9d19bee6e9e461ee7f";
+  > 7 │ await writeFile(path, execFileSync("git", ["show", baseline + ":" + path]));
+      │                                                    ^^^^^^^^^^^^^^^^^^^^^
+    8 │ 
+  
+  i Template literals are easier to read than a chain of + operators and quotes, and they avoid mistakes with spaces and escaped quotes.
+  
+  i Unsafe fix: Use a template literal.
+  
+    5 5 │   const path = "userscripts/HDU_Android_P6.3_Lite.user.js";
+    6 6 │   const baseline = "dccafec5d02993cb31e85f9d19bee6e9e461ee7f";
+    7   │ - await·writeFile(path,·execFileSync("git",·["show",·baseline·+·":"·+·path]));
+      7 │ + await·writeFile(path,·execFileSync("git",·["show",·`${baseline}:${path}`]));
+    8 8 │   
+  
+
+src/userscript/p60/panel.js:76:11 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    74 │       ? "检测到旧版"
+    75 │       : view.historical
+  > 76 │         ? "未启动 · 上次 " + STATES[view.state]
+       │           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    77 │         : STATES[view.state];
+    78 │     el("reason").textContent =
+  
+  i Template literals are easier to read than a chain of + operators and quotes, and they avoid mistakes with spaces and escaped quotes.
+  
+  i Unsafe fix: Use a template literal.
+  
+     74  74 │         ? "检测到旧版"
+     75  75 │         : view.historical
+     76     │ - ········?·"未启动···上次·"·+·STATES[view.state]
+         76 │ + ········?·`未启动···上次·${STATES[view.state]}`
+     77  77 │           : STATES[view.state];
+     78  78 │       el("reason").textContent =
+  
+
+Checked 10 files in 77ms. No fixes applied.
+Found 2 infos.

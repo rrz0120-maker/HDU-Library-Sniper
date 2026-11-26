@@ -1,0 +1,73 @@
+✔ ParamError 选择的座位无法预约，可能座位不可用或已经被其他人锁定或占用。 (1.516511ms)
+✔ ParamError 该账户无法预约 (0.305591ms)
+✖ ParamError 该账户无法预约座位，账户已被锁定 (1.138302ms)
+✔ ParamError 座位已被其他人占用 (0.165685ms)
+✖ ParamError 座位状态说明：占用信息暂不可用 (0.291531ms)
+✔ ParamError 参数错误 (0.205764ms)
+✔ ParamError 登录状态已失效 (0.138344ms)
+✔ ParamError 未到开放时间 (0.139757ms)
+✔ ParamError 预约时间尚未开放 (0.187407ms)
+✔ ParamError 超出可预约座位时间范围 (0.233535ms)
+✔ ParamError 已有预约 (0.157222ms)
+✔ ParamError 请求过于频繁，请10分钟后再试 (0.124985ms)
+✔ ParamError 无法识别的新消息 (0.115981ms)
+✔ ParamError without a rejection signal stays unresolved (0.227145ms)
+✔ explicit authentication code (0.124363ms)
+✔ HTTP 200 alone and partial success fields are unresolved (0.188308ms)
+✔ HTTP priority and exact acceptance stay explicit (0.217491ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 15
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 113.9753
+
+✖ failing tests:
+
+test at tests/userscript-p64/classification.test.mjs:21:3
+✖ ParamError 该账户无法预约座位，账户已被锁定 (1.138302ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SEAT_UNAVAILABLE'
+  - 'BUSINESS_REJECTED'
+  
+      at TestContext.<anonymous> (file:///workspace/work/p64/tests/userscript-p64/classification.test.mjs:22:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SEAT_UNAVAILABLE',
+    expected: 'BUSINESS_REJECTED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/userscript-p64/classification.test.mjs:21:3
+✖ ParamError 座位状态说明：占用信息暂不可用 (0.291531ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SEAT_UNAVAILABLE'
+  - 'RESPONSE_UNKNOWN'
+  
+      at TestContext.<anonymous> (file:///workspace/work/p64/tests/userscript-p64/classification.test.mjs:22:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SEAT_UNAVAILABLE',
+    expected: 'RESPONSE_UNKNOWN',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

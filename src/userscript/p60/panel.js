@@ -19,7 +19,7 @@ export function mountPanel(host, engine, legacy) {
     ".row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:7px 0}button{padding:4px 9px;border:1px solid #9db7b0;border-radius:7px;background:#fff;cursor:pointer}",
     "#start{background:#155d50;color:#fff;border-color:#155d50}button:disabled{opacity:.5}p{margin:7px 0}.note{font-size:12px;color:#526b6b}",
     "output{display:block;overflow-wrap:anywhere;white-space:pre-wrap;font-size:12px}textarea{width:100%;height:110px}</style>",
-    '<details><summary>P6.3 · 162 · <span id="state" role="status"></span></summary><div class="body">',
+    '<details><summary>P6.4 候选 · 162 · <span id="state" role="status"></span></summary><div class="body">',
     '<p>宋韵云图（四楼）162号</p><p id="target"></p>',
     '<div class="row"><label>开始 <select id="startHour"></select></label><label>结束 <select id="endHour"></select></label></div>',
     '<label>20:00 后 <input id="offset" type="number" min="800" max="2000" step="1" value="1350"> 毫秒</label>',
@@ -28,7 +28,7 @@ export function mountPanel(host, engine, legacy) {
     '<output id="reason" aria-live="polite"></output><output id="metrics"></output>',
     '<div class="row"><button id="review">核验官方记录</button><button id="copy">复制诊断日志</button></div>',
     '<span id="copyStatus" role="status"></span><textarea id="log" aria-label="脱敏诊断日志" readonly hidden></textarea>',
-    '<button id="history">查看最近30次运行</button><div id="archive" hidden><select id="runs" aria-label="历史运行"></select><textarea id="snapshot" readonly aria-label="历史诊断"></textarea><button id="copyHistory">复制所选 JSON</button></div>',
+    '<button id="history">查看运行历史（含P6.3）</button><div id="archive" hidden><select id="runs" aria-label="历史运行"></select><textarea id="snapshot" readonly aria-label="历史诊断"></textarea><button id="copyHistory">复制所选 JSON</button></div>',
     "</div></details>",
   ].join("");
   const el = (id) => root.getElementById(id);
